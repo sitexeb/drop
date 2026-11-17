@@ -5,53 +5,53 @@ Final node of Layer 2. Takes fully prepared listings and:
   1. Checks for duplicate via local registry + Shopify verification
   2. Uploads processed images to Shopify CDN (REST)
   3. Creates the Shopify product with all fields + SEO metafields (REST)
-     — including real color/size/pack options + variants when CJ supplied them
+     [*] including real color/size/pack options + variants when CJ supplied them
   4. Sets retail price + compare_at_price per variant
   5. Assigns product to its Shopify collection
   6. Links each variant to its own image (reusing gallery images where
      CJ's variant photo is already one of the product's own images)
-  7. Attaches any downloaded product videos (GraphQL — REST cannot do this)
+  7. Attaches any downloaded product videos (GraphQL [*] REST cannot do this)
   8. Reorders media so the video is FIRST (storefront leads with video)
   9. Publishes immediately (status = "active")
 
 Deduplication strategy:
-  - Registry file (fast local check) → if found, verify product still exists on Shopify
-  - If Shopify returns 404 (manually deleted) → remove from registry → republish
-  - TTL of 90 days → expired entries eligible for refresh
+  - Registry file (fast local check) [*] if found, verify product still exists on Shopify
+  - If Shopify returns 404 (manually deleted) [*] remove from registry [*] republish
+  - TTL of 90 days [*] expired entries eligible for refresh
   - Registry auto-purges expired entries on every save
 
 Video attachment strategy:
-  - Shopify's REST Admin API (products.json) does NOT accept video media —
+  - Shopify's REST Admin API (products.json) does NOT accept video media [*]
     only images. Video requires the GraphQL Admin API:
-      1. stagedUploadsCreate  → get a signed upload URL + params
+      1. stagedUploadsCreate  [*] get a signed upload URL + params
       2. POST the local video file (multipart) to that signed URL
-      3. productCreateMedia   → attach the uploaded resource to the product
+      3. productCreateMedia   [*] attach the uploaded resource to the product
          (this APPENDS the video after all REST-created images)
-      4. productReorderMedia  → move the video to position 0 so it's the
+      4. productReorderMedia  [*] move the video to position 0 so it's the
          first thing shown on the storefront product page
   - Video attachment (including reorder) is best-effort: if any step
     fails, the product still publishes successfully with its images.
 
 Variant/option strategy:
-  - CJ gives ONE combined string per variant (variantKey → our
+  - CJ gives ONE combined string per variant (variantKey [*] our
     option_value), e.g. "Badge Blue-S", "Style 1-1 PC", or
     "200cm 80cm 15cm 2-Black". We split on the FIRST hyphen into two
-    columns whenever MOST variants in the batch split cleanly (>=60%) —
+    columns whenever MOST variants in the batch split cleanly (>=60%) [*]
     not requiring 100%, since a single outlier used to silently collapse
     the whole product into one giant combined "Style" dropdown.
   - Each column is labeled by CONTENT, not position (a yoga mat's
-    dimensions come BEFORE color; clothing's color comes BEFORE size —
+    dimensions come BEFORE color; clothing's color comes BEFORE size [*]
     position-based labeling gets this backwards for some products).
   - A free keyword/regex heuristic (_classify_column) handles the common
     cases (color words, size words/measurements, pack/unit counts like
     "1 PC") instantly with no API cost. Only when the heuristic can't
     confidently label one or both columns do we spend one small
-    GPT-4o-mini call to name them (e.g. "Material", "Scent") — the LLM
+    GPT-4o-mini call to name them (e.g. "Material", "Scent") [*] the LLM
     ONLY assigns the two option NAMES, never touches the actual
     values/prices/images, so a bad or failed LLM call can never corrupt
     variant data, only fall back to generic "Style"/"Type" labels.
   - Variant images are reused from the general gallery when CJ's variant
-    photo is already one of the product's own images (the common case —
+    photo is already one of the product's own images (the common case [*]
     mirrors CJ's own manual listing flow), or uploaded fresh otherwise.
   - inventory_policy is set to "continue" on every variant so customers
     can always order additional quantity (dropshipping has no real fixed
@@ -79,13 +79,13 @@ load_dotenv()
 from layer2.state import GraphState, ShopifyListing
 from config_loader import get_layer_config
 
-# ── Config ────────────────────────────────────────────────────────────────────
+# [*][*] Config [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 _collection_cache: dict = {}
 REGISTRY_PATH    = Path("layer2/output/published_pids.json")
 
 # How long a published product stays protected from republishing before
 # Layer 2 treats it as eligible for a fresh listing again. Sourced from
-# config.json's layer2.registry_ttl_days — falls back to 90 if config.json
+# config.json's layer2.registry_ttl_days [*] falls back to 90 if config.json
 # or that key is missing, so this module still works standalone. Set to
 # 120 days intentionally (per product decision): old listings are meant to
 # be periodically refreshed/republished after this window, not protected
@@ -100,8 +100,8 @@ API_VERSION = "2024-01"
 
 # Shared session with retry/backoff for every Shopify REST + GraphQL call.
 # Plain single-attempt requests.* calls were turning ordinary transient
-# connect-timeouts (seen against the live store) into permanent failures —
-# skipped collection assignments, unlinked variant images, etc. — even
+# connect-timeouts (seen against the live store) into permanent failures [*]
+# skipped collection assignments, unlinked variant images, etc. [*] even
 # though the underlying product had published successfully. This does NOT
 # retry the product-creation POST itself with different data, only the
 # same request; product creation is still wrapped by the caller's own
@@ -118,7 +118,7 @@ _shopify_session.mount("https://", HTTPAdapter(max_retries=_shopify_retry))
 _shopify_session.mount("http://", HTTPAdapter(max_retries=_shopify_retry))
 
 
-# ── Registry helpers ──────────────────────────────────────────────────────────
+# [*][*] Registry helpers [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 def _load_registry() -> dict:
     if REGISTRY_PATH.exists():
@@ -160,7 +160,7 @@ def _remove_from_registry(cj_pid: str) -> None:
     _save_registry(registry)
 
 
-# ── Shopify helpers (REST) ──────────────────────────────────────────────────────
+# [*][*] Shopify helpers (REST) [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 def _shopify_headers() -> dict:
     return {
@@ -177,7 +177,7 @@ def _base_url() -> str:
 def _shopify_product_exists(product_id: str) -> bool:
     """
     Quick check if a product still exists on Shopify.
-    Only fetches the id field — minimal data transfer.
+    Only fetches the id field [*] minimal data transfer.
     Returns True on network errors (safer to skip than create duplicate).
     """
     try:
@@ -192,7 +192,7 @@ def _shopify_product_exists(product_id: str) -> bool:
         return True   # assume exists on network error
 
 
-# ── Shopify helpers (GraphQL — video attach + reorder) ──────────────────────────
+# [*][*] Shopify helpers (GraphQL [*] video attach + reorder) [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 def _graphql_url() -> str:
     store = os.getenv("SHOPIFY_STORE_URL", "").rstrip("/")
@@ -346,7 +346,7 @@ def _attach_videos_to_product(product_id: str, local_video_paths: List[str]) -> 
     """
     Runs the full upload+attach flow for each local video file, then
     reorders the FIRST successfully attached video to position 0.
-    Best-effort throughout — a failure on any individual video (or the
+    Best-effort throughout [*] a failure on any individual video (or the
     reorder step) is logged and skipped, never raised.
     """
     if not local_video_paths:
@@ -378,7 +378,7 @@ def _attach_videos_to_product(product_id: str, local_video_paths: List[str]) -> 
 
     if first_video_media_gid:
         if _reorder_media_to_front(product_gid, first_video_media_gid):
-            print(f"[StorePublisher]     🥇 Video moved to first position")
+            print(f"[StorePublisher]     [*] Video moved to first position")
         else:
             print(f"[StorePublisher]     [!]  Video attached but reorder-to-front failed "
                   f"(video is still visible, just not first)")
@@ -386,16 +386,16 @@ def _attach_videos_to_product(product_id: str, local_video_paths: List[str]) -> 
     return attached
 
 
-# ── Duplicate check ───────────────────────────────────────────────────────────
+# [*][*] Duplicate check [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 def _cj_pid_exists(cj_pid: str) -> Optional[str]:
     """
     Three-layer duplicate check:
-      1. Not in registry       → new product, publish it
-      2. In registry but TTL expired → eligible for refresh, republish
-      3. In registry + valid TTL → verify on Shopify:
-           - Still exists     → skip (true duplicate)
-           - 404 deleted      → remove from registry, republish
+      1. Not in registry       [*] new product, publish it
+      2. In registry but TTL expired [*] eligible for refresh, republish
+      3. In registry + valid TTL [*] verify on Shopify:
+           - Still exists     [*] skip (true duplicate)
+           - 404 deleted      [*] remove from registry, republish
     """
     registry = _load_registry()
     if cj_pid not in registry:
@@ -406,21 +406,21 @@ def _cj_pid_exists(cj_pid: str) -> Optional[str]:
     age_days     = (datetime.now() - published_at).days
 
     if age_days > REGISTRY_TTL_DAYS:
-        print(f"[StorePublisher]   [*] cj_pid {cj_pid} expired ({age_days}d old) — refreshing listing")
+        print(f"[StorePublisher]   [*] cj_pid {cj_pid} expired ({age_days}d old) [*] refreshing listing")
         return None
 
     existing_id = entry["shopify_product_id"]
 
     if not _shopify_product_exists(existing_id):
-        print(f"[StorePublisher]   [*] Product {existing_id} was deleted from Shopify — republishing")
+        print(f"[StorePublisher]   [*] Product {existing_id} was deleted from Shopify [*] republishing")
         _remove_from_registry(cj_pid)
         return None
 
-    print(f"[StorePublisher]   [!]  Duplicate — published {age_days}d ago (Shopify id: {existing_id})")
+    print(f"[StorePublisher]   [!]  Duplicate [*] published {age_days}d ago (Shopify id: {existing_id})")
     return existing_id
 
 
-# ── Collection assignment ─────────────────────────────────────────────────────
+# [*][*] Collection assignment [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 def _get_collection_id(collection_name: str) -> Optional[str]:
     """Find Shopify collection ID by title. Checks custom + smart collections."""
@@ -465,14 +465,14 @@ def _assign_to_collection(product_id: str, collection_name: str) -> None:
         if resp.status_code in (200, 201):
             print(f"[StorePublisher]   [OK] Assigned to collection: {collection_name}")
         elif resp.status_code == 422:
-            print(f"[StorePublisher]   ℹ️  Already in collection: {collection_name}")
+            print(f"[StorePublisher]   [*][*]  Already in collection: {collection_name}")
         else:
             print(f"[StorePublisher]   [!]  Collection assign failed: {resp.status_code}")
     except Exception as e:
         print(f"[StorePublisher]   [!]  Collection assign error: {e}")
 
 
-# ── Field validation ───────────────────────────────────────────────────────────
+# [*][*] Field validation [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 def _validate_listing_pricing(listing: ShopifyListing) -> None:
     """
@@ -484,13 +484,13 @@ def _validate_listing_pricing(listing: ShopifyListing) -> None:
     if listing.retail_price is None:
         raise ValueError(
             f"retail_price is None for cj_pid={listing.cj_pid} "
-            f"('{listing.original_title}') — check the Layer 2 pricing step "
+            f"('{listing.original_title}') [*] check the Layer 2 pricing step "
             f"that builds this ShopifyListing, it never set retail_price."
         )
     if listing.supplier_price is None:
         raise ValueError(
             f"supplier_price is None for cj_pid={listing.cj_pid} "
-            f"('{listing.original_title}') — check that Layer 1's supplier_price "
+            f"('{listing.original_title}') [*] check that Layer 1's supplier_price "
             f"survived the handoff into Layer 2."
         )
 
@@ -499,16 +499,16 @@ def _safe_compare_at_price(listing: ShopifyListing) -> Optional[float]:
     """
     compare_at_price ('was' price / strikethrough) is intentionally left
     unset unless PriceOptimizer explicitly computed a real one (see
-    layer2/nodes/price_optimizer.py — compare_at is deliberately None for
+    layer2/nodes/price_optimizer.py [*] compare_at is deliberately None for
     every product right now; no fake discounts). Returning None here (not
     retail_price) means Shopify's Admin shows an empty compare-at field,
-    not a confusing "compare price == price" — the payload builder below
+    not a confusing "compare price == price" [*] the payload builder below
     must handle None by omitting the key, not stringifying it.
     """
     return listing.compare_at_price
 
 
-# ── Variant/option splitting heuristics ─────────────────────────────────────────
+# [*][*] Variant/option splitting heuristics [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 _KNOWN_COLOR_WORDS = {
     "black", "white", "red", "blue", "green", "yellow", "pink", "purple",
@@ -525,7 +525,7 @@ _SIZE_PATTERN_WORDS = {
     "one size", "os", "small", "medium", "large",
 }
 
-# "1 PC", "2 pcs", "1 pair", "3 sets" — a quantity/unit count, NOT a
+# "1 PC", "2 pcs", "1 pair", "3 sets" [*] a quantity/unit count, NOT a
 # physical size. Checked BEFORE the size check, since e.g. "1 PC" contains
 # a digit and would otherwise risk being misread as a size.
 _PACK_PATTERN = re.compile(r'^\d+\s*(pc|pcs|piece|pieces|pair|pairs|set|sets)$', re.IGNORECASE)
@@ -547,7 +547,7 @@ def _looks_like_size(value: str) -> bool:
       - measurements with units: "200cm", "15 mm", "10in", '12"'
       - purely numeric values (ignoring spaces): "38", "39 40", "6 7"
 
-    Deliberately does NOT match on "contains any digit" — that was too
+    Deliberately does NOT match on "contains any digit" [*] that was too
     greedy and misclassified things like "Style 1", "Style 2" (arbitrary
     design numbering, nothing to do with physical size) as a size column.
     """
@@ -570,13 +570,13 @@ def _classify_column(values: List[str]) -> Optional[str]:
     """
     Classifies an entire option column (all values on one side of the
     hyphen, across every variant) as one of: "pack", "color", "size", or
-    None (heuristic genuinely unsure — caller should try the LLM fallback).
+    None (heuristic genuinely unsure [*] caller should try the LLM fallback).
 
     Checked in priority order pack > color > size specifically because
     "1 PC" contains a digit and would otherwise wrongly match "size"
     before we get a chance to recognize it as a pack/unit count.
 
-    POSITION-INDEPENDENT: we don't assume "first part is always color" —
+    POSITION-INDEPENDENT: we don't assume "first part is always color" [*]
     a yoga mat's variantKey is "200cm 80cm 15cm 2-Black" (size FIRST,
     color SECOND), the opposite order from clothing's "Badge Blue-S"
     (color first, size second). Classifying each column on its own
@@ -591,18 +591,18 @@ def _classify_column(values: List[str]) -> Optional[str]:
     return None
 
 
-# ── LLM fallback for ambiguous option naming ────────────────────────────────
+# [*][*] LLM fallback for ambiguous option naming [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 # The heuristic above handles the vast majority of CJ products for free
 # and instantly. It only fails to produce a confident label when a
 # column's values don't match any known color/size/pack pattern (e.g. a
 # material name, a scent, or a design-numbering scheme we've never seen).
 # Rather than keep growing keyword lists forever (we've already hit
 # several false-positive bugs doing that), we fall back to ONE small
-# GPT-4o-mini call — but ONLY to pick the two option NAMES (e.g.
+# GPT-4o-mini call [*] but ONLY to pick the two option NAMES (e.g.
 # "Material", "Style"). The LLM never sees or touches the actual variant
-# values/prices/images — it just labels the two columns we already split
+# values/prices/images [*] it just labels the two columns we already split
 # deterministically. If the call fails for any reason, we fall back to
-# generic "Style" / "Type" labels — the product still publishes correctly
+# generic "Style" / "Type" labels [*] the product still publishes correctly
 # either way.
 
 _option_naming_llm = None
@@ -627,10 +627,10 @@ def _llm_classify_option_names(col1_values: List[str], col2_values: List[str]) -
     """
     Asks GPT-4o-mini to name two Shopify option columns, given a sample of
     each column's distinct values. Returns (name1, name2) or None on any
-    failure (missing API key, network error, malformed response) — callers
+    failure (missing API key, network error, malformed response) [*] callers
     must have a non-LLM fallback ready.
 
-    Deliberately constrained to ONLY return two short labels — never asked
+    Deliberately constrained to ONLY return two short labels [*] never asked
     to reformat, correct, or reinterpret the actual values, so there is no
     path by which this call can corrupt real variant data.
     """
@@ -667,7 +667,7 @@ def _llm_classify_option_names(col1_values: List[str], col2_values: List[str]) -
             print(f"[StorePublisher]     [!]  LLM returned invalid/duplicate option names: {data}")
             return None
 
-        print(f"[StorePublisher]     🤖 LLM classified columns: '{name1}' / '{name2}'")
+        print(f"[StorePublisher]     [*] LLM classified columns: '{name1}' / '{name2}'")
         return name1, name2
 
     except Exception as e:
@@ -681,12 +681,12 @@ def _split_variant_value(value: str) -> Optional[tuple]:
     Returns (first_part, second_part) or None if can't split cleanly.
 
     Examples:
-        "Style 1-1 pair"      → ("Style 1", "1 pair")
-        "Style 1 - 1 pair"    → ("Style 1", "1 pair")
-        "Red-S"               → ("Red", "S")
-        "Red - S"             → ("Red", "S")
-        "Badge Blue-S"        → ("Badge Blue", "S")
-        "200cm 80cm 2-Black"  → ("200cm 80cm 2", "Black")
+        "Style 1-1 pair"      [*] ("Style 1", "1 pair")
+        "Style 1 - 1 pair"    [*] ("Style 1", "1 pair")
+        "Red-S"               [*] ("Red", "S")
+        "Red - S"             [*] ("Red", "S")
+        "Badge Blue-S"        [*] ("Badge Blue", "S")
+        "200cm 80cm 2-Black"  [*] ("200cm 80cm 2", "Black")
     """
     # Try " - " first (more specific)
     if " - " in value:
@@ -711,16 +711,16 @@ def _derive_option_columns(variants_raw: List[dict]) -> tuple:
     """
     Splits CJ's combined variantKey (e.g. "Badge Blue-S", "Style 1-1 PC",
     "200cm 80cm 15cm 2-Black") into two real Shopify options whenever MOST
-    variants in the batch split cleanly on the first hyphen (>=60%) — not
+    variants in the batch split cleanly on the first hyphen (>=60%) [*] not
     ALL of them, since a single outlier used to silently collapse the
     whole product into one giant combined "Style" dropdown.
 
     Labeling order:
-      1. Free heuristic (_classify_column) — instant, no cost. Handles
+      1. Free heuristic (_classify_column) [*] instant, no cost. Handles
          color/size/pack patterns.
       2. If either column is unclassified, or both classified the same
-         way — ONE small GPT-4o-mini call to name them semantically.
-      3. If the LLM also fails/is unavailable — generic "Style"/"Type"
+         way [*] ONE small GPT-4o-mini call to name them semantically.
+      3. If the LLM also fails/is unavailable [*] generic "Style"/"Type"
          fallback labels. Product always still publishes.
 
     Returns (option_defs, per_variant_values) where:
@@ -746,8 +746,8 @@ def _derive_option_columns(variants_raw: List[dict]) -> tuple:
             if val not in seen:
                 seen.add(val)
                 unique_values.append(val)
-        print(f"[StorePublisher]     ℹ️  Only {success_count}/{total} variants split cleanly "
-              f"— using single 'Style' option instead of two columns")
+        print(f"[StorePublisher]     [*][*]  Only {success_count}/{total} variants split cleanly "
+              f"[*] using single 'Style' option instead of two columns")
         return (
             [{"name": "Style", "values": unique_values}],
             [(val,) for val in values],
@@ -758,7 +758,7 @@ def _derive_option_columns(variants_raw: List[dict]) -> tuple:
     for result, v in zip(split_results, variants_raw):
         if result is None:
             print(f"[StorePublisher]     [!]  Variant '{v['option_value']}' didn't split cleanly "
-                  f"— using fallback second value '{FALLBACK_SECOND_VALUE}'")
+                  f"[*] using fallback second value '{FALLBACK_SECOND_VALUE}'")
             firsts.append(v["option_value"].strip())
             seconds.append(FALLBACK_SECOND_VALUE)
         else:
@@ -773,7 +773,7 @@ def _derive_option_columns(variants_raw: List[dict]) -> tuple:
     name2 = LABELS.get(col2_type)
 
     # Heuristic couldn't confidently label one/both columns, or both
-    # landed on the same label — try the LLM once instead of settling
+    # landed on the same label [*] try the LLM once instead of settling
     # for generic placeholders.
     needs_llm = (name1 is None) or (name2 is None) or (name1 == name2)
 
@@ -816,7 +816,7 @@ def _drop_degenerate_column(option_defs: list, per_variant_values: list) -> tupl
     meaningful option instead.
 
     No-op (returns inputs unchanged) if there's only 1 option column
-    already, or if BOTH columns are somehow degenerate (rare edge case —
+    already, or if BOTH columns are somehow degenerate (rare edge case [*]
     leave as-is rather than guess which one to keep).
     """
     if len(option_defs) < 2:
@@ -829,19 +829,19 @@ def _drop_degenerate_column(option_defs: list, per_variant_values: list) -> tupl
         return option_defs, per_variant_values
 
     if col2_unique <= 1:
-        print(f"[StorePublisher]     ℹ️  Dropping degenerate option "
+        print(f"[StorePublisher]     [*][*]  Dropping degenerate option "
               f"'{option_defs[1]['name']}' (only 1 value: {option_defs[1]['values']})")
         return [option_defs[0]], [(v[0],) for v in per_variant_values]
 
     if col1_unique <= 1:
-        print(f"[StorePublisher]     ℹ️  Dropping degenerate option "
+        print(f"[StorePublisher]     [*][*]  Dropping degenerate option "
               f"'{option_defs[0]['name']}' (only 1 value: {option_defs[0]['values']})")
         return [option_defs[1]], [(v[1],) for v in per_variant_values]
 
     return option_defs, per_variant_values
 
 
-# ── Main node ─────────────────────────────────────────────────────────────────
+# [*][*] Main node [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 def store_publisher_node(state: GraphState) -> dict:
     """
@@ -919,12 +919,12 @@ def store_publisher_node(state: GraphState) -> dict:
     }
 
 
-# ── Product creation ──────────────────────────────────────────────────────────
+# [*][*] Product creation [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 def _post_product_with_safe_retry(payload: dict, attempts: int = 3):
     """
     POSTs the product-creation payload with a narrow retry: only retries
-    when the connection itself never succeeded (DNS/connect timeout —
+    when the connection itself never succeeded (DNS/connect timeout [*]
     Shopify never saw the request), NOT on a read-timeout after the
     request was sent, since Shopify may have already created the product
     server-side in that case and a blind retry would create a duplicate.
@@ -955,13 +955,13 @@ def _publish_product(listing: ShopifyListing) -> tuple[str, str]:
       - ONE combined "Style" option as a fallback when it doesn't.
 
     Variant images are reused from the general gallery when CJ's photo is
-    already one of the product's own images (the common case — mirrors
+    already one of the product's own images (the common case [*] mirrors
     CJ's own manual listing flow), or uploaded fresh otherwise.
 
     inventory_policy is set to "continue" so customers can always order
     more quantity of the same variant.
 
-    NOTE: video attachment happens separately, AFTER this call succeeds —
+    NOTE: video attachment happens separately, AFTER this call succeeds [*]
     REST product creation has no video field.
     """
     bullets_html = "".join(f"<li>{b}</li>" for b in listing.bullet_points)
@@ -972,7 +972,7 @@ def _publish_product(listing: ShopifyListing) -> tuple[str, str]:
     category = getattr(listing, "category", "") or ""
     compare_at_price = _safe_compare_at_price(listing)
     compare_at_str = f"{compare_at_price:.2f}" if compare_at_price is not None else None
-    # ── Handle Tags ──────────────────────────────────────────────────────────
+    # [*][*] Handle Tags [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     # Get tags from shopify_tags first, then fall back to tags
     raw_tags = getattr(listing, "shopify_tags", []) or getattr(listing, "tags", [])
 
@@ -988,7 +988,7 @@ def _publish_product(listing: ShopifyListing) -> tuple[str, str]:
                 clean_tags.append(clean_tag)
                 seen_tags.add(clean_tag)
 
-    # ── Add Collection Tags ──────────────────────────────────────────────────
+    # [*][*] Add Collection Tags [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     # Add collection if available and not already present
     collection = getattr(listing, "collection", None)
     if collection:
@@ -1050,9 +1050,9 @@ def _publish_product(listing: ShopifyListing) -> tuple[str, str]:
     if clean_tags:
         print(f"[StorePublisher]   [*]  Final tags ({len(clean_tags)} total): {', '.join(clean_tags)}")
     else:
-        print(f"[StorePublisher]   ℹ️  No tags to apply")
+        print(f"[StorePublisher]   [*][*]  No tags to apply")
 
-    # ── General gallery images ──────────────────────────────────────────────
+    # [*][*] General gallery images [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     general_images = _prepare_images(listing)
     url_to_general_index = {
         url: i for i, url in enumerate(listing.image_urls[:len(general_images)])
@@ -1061,7 +1061,7 @@ def _publish_product(listing: ShopifyListing) -> tuple[str, str]:
     variants_raw = getattr(listing, "variants", None) or []
     has_real_variants = len(variants_raw) >= 2
 
-    # ── Plan variant images: reuse existing gallery image, or queue new upload ──
+    # [*][*] Plan variant images: reuse existing gallery image, or queue new upload [*][*]
     variant_image_plan: List[Optional[tuple]] = []
     new_variant_images: List[dict] = []
 
@@ -1079,16 +1079,16 @@ def _publish_product(listing: ShopifyListing) -> tuple[str, str]:
     all_images = general_images + new_variant_images
     num_general = len(general_images)
 
-    # ── Options + variants payload ──────────────────────────────────────────
+    # [*][*] Options + variants payload [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     if has_real_variants:
         option_defs, per_variant_values = _derive_option_columns(variants_raw)
 
         # Log variant options
         if len(option_defs) == 2:
-            print(f"[StorePublisher]   🎨 {len(variants_raw)} variants with {len(option_defs)} options: "
+            print(f"[StorePublisher]   [*] {len(variants_raw)} variants with {len(option_defs)} options: "
                   f"{option_defs[0]['name']} + {option_defs[1]['name']}")
         else:
-            print(f"[StorePublisher]   🎨 {len(variants_raw)} variants with single option: {option_defs[0]['name']}")
+            print(f"[StorePublisher]   [*] {len(variants_raw)} variants with single option: {option_defs[0]['name']}")
 
         variants_payload = []
         for v, values in zip(variants_raw, per_variant_values):
@@ -1099,7 +1099,7 @@ def _publish_product(listing: ShopifyListing) -> tuple[str, str]:
             variant_price = v.get("retail_price")
             if variant_price is None:
                 print(f"[StorePublisher]     [!]  Variant '{v.get('option_value', '?')}' "
-                      f"missing retail_price — using listing price ${listing.retail_price:.2f}")
+                      f"missing retail_price [*] using listing price ${listing.retail_price:.2f}")
                 variant_price = listing.retail_price
 
             # Get variant weight if available
@@ -1140,7 +1140,7 @@ def _publish_product(listing: ShopifyListing) -> tuple[str, str]:
         if compare_at_str is not None:
             variants_payload[0]["compare_at_price"] = compare_at_str
 
-    # ── Build Metafields ────────────────────────────────────────────────────
+    # [*][*] Build Metafields [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     metafields = [
         {"namespace": "global", "key": "title_tag", "value": listing.seo_title, "type": "single_line_text_field"},
         {"namespace": "global", "key": "description_tag", "value": listing.seo_description,
@@ -1177,7 +1177,7 @@ def _publish_product(listing: ShopifyListing) -> tuple[str, str]:
             "type": "single_line_text_field"
         })
 
-    # ── Build Final Payload ─────────────────────────────────────────────────
+    # [*][*] Build Final Payload [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     product_payload = {
         "product": {
             "title": listing.shopify_title,
@@ -1193,8 +1193,8 @@ def _publish_product(listing: ShopifyListing) -> tuple[str, str]:
         }
     }
 
-    # ── Debug: Log payload summary ──────────────────────────────────────────
-    compare_at_display = f"${compare_at_price:.2f}" if compare_at_price is not None else "— (none)"
+    # [*][*] Debug: Log payload summary [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
+    compare_at_display = f"${compare_at_price:.2f}" if compare_at_price is not None else "[*] (none)"
     print(f"[StorePublisher]     - Compare at: {compare_at_display}")
     print(f"[StorePublisher]   [*] Creating product with:")
     print(f"[StorePublisher]     - Title: {listing.shopify_title[:60]}...")
@@ -1204,7 +1204,7 @@ def _publish_product(listing: ShopifyListing) -> tuple[str, str]:
     print(f"[StorePublisher]     - Tags: {len(clean_tags)}")
     print(f"[StorePublisher]     - Metafields: {len(metafields)}")
 
-    # ── Send to Shopify ─────────────────────────────────────────────────────
+    # [*][*] Send to Shopify [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     resp = _post_product_with_safe_retry(product_payload)
 
     if resp.status_code not in (200, 201):
@@ -1217,7 +1217,7 @@ def _publish_product(listing: ShopifyListing) -> tuple[str, str]:
     store_url = os.getenv("SHOPIFY_STORE_URL", "").rstrip("/")
     product_url = f"https://{store_url}/products/{data['handle']}"
 
-    # ── Verify tags were set correctly ──────────────────────────────────────
+    # [*][*] Verify tags were set correctly [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     tags_from_response = data.get("tags", "")
     if tags_from_response:
         print(
@@ -1225,14 +1225,14 @@ def _publish_product(listing: ShopifyListing) -> tuple[str, str]:
     else:
         print(f"[StorePublisher]   [!]  No tags returned in Shopify response!")
 
-    # ── Link variant images ─────────────────────────────────────────────────
+    # [*][*] Link variant images [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     if has_real_variants:
         try:
             _link_variant_images(data, num_general, variant_image_plan)
         except Exception as e:
             print(f"[StorePublisher]     [!]  Variant-image linking failed (product still live): {e}")
 
-    # ── Log success ─────────────────────────────────────────────────────────
+    # [*][*] Log success [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     print(f"[StorePublisher]   [OK] Product live at: {product_url}")
     print(f"[StorePublisher]   [*] Shopify ID: {product_id}")
 
@@ -1242,8 +1242,8 @@ def _link_variant_images(data: dict, num_general_images: int, variant_image_plan
     """
     Links each variant to its photo. Handles both cases:
       - ("existing", i): the variant's photo was already one of the
-        general gallery images — point the variant straight at that image.
-      - ("new", j): the variant had a photo NOT already in the gallery —
+        general gallery images [*] point the variant straight at that image.
+      - ("new", j): the variant had a photo NOT already in the gallery [*]
         it was appended after general_images in the submitted array, so
         its response position is num_general_images + j.
       - None: no image for this variant, nothing to link.
@@ -1282,7 +1282,7 @@ def _link_variant_images(data: dict, num_general_images: int, variant_image_plan
                     response_variants[i].get("option2"),
                 ]
                 label = " ".join(o for o in opts if o)
-                print(f"[StorePublisher]     🎨 Linked {tag} image → {label}")
+                print(f"[StorePublisher]     [*] Linked {tag} image [*] {label}")
             else:
                 print(f"[StorePublisher]     [!]  Variant image link failed ({resp.status_code}) "
                       f"for variant {i}")
@@ -1309,7 +1309,7 @@ def _print_summary(published: List[ShopifyListing]) -> None:
     if not published:
         return
     print("\n" + "="*65)
-    print("  LAYER 2 COMPLETE — PRODUCTS LIVE ON SHOPIFY")
+    print("  LAYER 2 COMPLETE [*] PRODUCTS LIVE ON SHOPIFY")
     print("="*65)
     for p in published:
         compare_price = p.compare_at_price if p.compare_at_price is not None else p.retail_price
@@ -1324,5 +1324,5 @@ def _print_summary(published: List[ShopifyListing]) -> None:
         if n_videos:
             print(f"  Video:  {n_videos} attached (leading position)")
         print(f"  URL:    {p.shopify_product_url}")
-    print("\n  → Layer 3 (Order Router) will handle incoming orders")
+    print("\n  [*] Layer 3 (Order Router) will handle incoming orders")
     print("="*65 + "\n")

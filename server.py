@@ -7,20 +7,20 @@ separate "Background Worker" service.
 
 On import (i.e. as soon as gunicorn loads this module):
   1. Wires up Render's persistent Disk (if mounted) so layer1/output and
-     layer2/output survive redeploys/restarts — see _wire_persistent_disk().
+     layer2/output survive redeploys/restarts [*] see _wire_persistent_disk().
   2. Starts a background thread that calls scheduler.run_tick() on a loop,
-     exactly like `scheduler.py --loop` — every LOOP_CHECK_INTERVAL_SECONDS,
+     exactly like `scheduler.py --loop` [*] every LOOP_CHECK_INTERVAL_SECONDS,
      self-gated by publish_frequency_hours / empty_batch_retry_hours as usual.
 
 Endpoints:
-  GET  /healthz          — plain 200 OK, wired up as Render's health check
-  GET  /status           — same info as `scheduler.py --status`, as JSON
-  POST /trigger?force=true — manually run a tick in the background.
+  GET  /healthz          [*] plain 200 OK, wired up as Render's health check
+  GET  /status           [*] same info as `scheduler.py --status`, as JSON
+  POST /trigger?force=true [*] manually run a tick in the background.
                              Requires header `X-Admin-Token: <token>`
                              matching the ADMIN_TRIGGER_TOKEN env var,
                              since this URL is publicly reachable.
 
-IMPORTANT — run with a single worker:
+IMPORTANT [*] run with a single worker:
   gunicorn server:app --workers 1 ...
 Two workers would each start their own background scheduler thread and
 publish products twice. --workers 1 --threads N (for concurrent HTTP
@@ -37,7 +37,7 @@ from pathlib import Path
 
 from flask import Flask, jsonify, request
 
-import scheduler  # reused as-is — same run_tick/state logic as `scheduler.py --loop`
+import scheduler  # reused as-is [*] same run_tick/state logic as `scheduler.py --loop`
 
 app = Flask(__name__)
 
@@ -45,7 +45,7 @@ LOOP_CHECK_INTERVAL_SECONDS = scheduler.LOOP_CHECK_INTERVAL_SECONDS
 ADMIN_TRIGGER_TOKEN = os.getenv("ADMIN_TRIGGER_TOKEN", "")
 
 # One-off safety valve: on a fresh deploy, the background thread's FIRST
-# tick fires within a second or two of startup — too fast to SSH in and
+# tick fires within a second or two of startup [*] too fast to SSH in and
 # migrate seen_pids.json/published_pids.json onto the volume first. Set
 # this env var (seconds) to delay that first tick, giving yourself a window
 # to upload state before Layer 1 can possibly run. Safe to leave at 0 (no
@@ -57,25 +57,25 @@ STARTUP_DELAY_SECONDS = int(os.getenv("SCHEDULER_INITIAL_DELAY_SECONDS", "0"))
 _tick_lock = threading.Lock()
 
 
-# ── Persistent disk wiring ───────────────────────────────────────────────────
+# [*][*] Persistent disk wiring [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 def _wire_persistent_disk() -> None:
     """
-    If a persistent volume/disk is mounted (PERSISTENT_DISK_PATH — e.g. a
+    If a persistent volume/disk is mounted (PERSISTENT_DISK_PATH [*] e.g. a
     Railway Volume's mount path, or RENDER_DISK_PATH for backward
     compatibility if you deployed this on Render before), symlink
     layer1/output and layer2/output into it. Without this, seen_pids.json,
     winning_products.json, publish_state.json, and the published-products
     registry all live on the service's local (ephemeral) filesystem and are
-    WIPED on every redeploy — which would cause duplicate publishing and
+    WIPED on every redeploy [*] which would cause duplicate publishing and
     repeated Layer 1 discovery of the same products.
 
     Falls back to plain local directories (with a warning) if neither env
-    var is set — fine for local dev, not for production.
+    var is set [*] fine for local dev, not for production.
     """
     disk_path = os.getenv("PERSISTENT_DISK_PATH") or os.getenv("RENDER_DISK_PATH")
     if not disk_path:
-        print("[Server] [!]  PERSISTENT_DISK_PATH not set — using EPHEMERAL local storage. "
+        print("[Server] [!]  PERSISTENT_DISK_PATH not set [*] using EPHEMERAL local storage. "
               "This is fine for local testing but will lose seen_pids/publish_state/"
               "winning_products on every redeploy. Set PERSISTENT_DISK_PATH + attach a "
               "persistent volume (e.g. a Railway Volume) for production.")
@@ -94,7 +94,7 @@ def _wire_persistent_disk() -> None:
             continue  # already wired up from a previous startup
 
         if local_path.exists():
-            print(f"[Server] [!]  {local_path} already exists as a real directory — "
+            print(f"[Server] [!]  {local_path} already exists as a real directory [*] "
                   f"leaving it as-is (NOT symlinked to the persistent disk). Delete it "
                   f"manually (once) if you want it backed by the persistent disk instead.")
             continue
@@ -107,12 +107,12 @@ def _wire_persistent_disk() -> None:
             print(f"[Server] [!]  Could not symlink {local_path} -> {target}: {e}")
 
 
-# ── Background scheduler loop ────────────────────────────────────────────────
+# [*][*] Background scheduler loop [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 def _background_loop() -> None:
     if STARTUP_DELAY_SECONDS > 0:
-        print(f"[Server] ⏸️  Delaying first scheduler tick by {STARTUP_DELAY_SECONDS}s "
-              f"(SCHEDULER_INITIAL_DELAY_SECONDS) — migrate state files onto the volume "
+        print(f"[Server] [*][*]  Delaying first scheduler tick by {STARTUP_DELAY_SECONDS}s "
+              f"(SCHEDULER_INITIAL_DELAY_SECONDS) [*] migrate state files onto the volume "
               f"via `railway ssh` now, before Layer 1 can run.")
         time.sleep(STARTUP_DELAY_SECONDS)
     print(f"[Server] [*] Background scheduler loop started "
@@ -140,12 +140,12 @@ def _start_background_thread_once() -> None:
 
 
 # Runs at import time (i.e. when gunicorn loads "server:app"), not just
-# under `if __name__ == "__main__"` — gunicorn never executes that block.
+# under `if __name__ == "__main__"` [*] gunicorn never executes that block.
 _wire_persistent_disk()
 _start_background_thread_once()
 
 
-# ── HTTP endpoints ────────────────────────────────────────────────────────────
+# [*][*] HTTP endpoints [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 @app.route("/healthz", methods=["GET"])
 def healthz():
@@ -189,6 +189,6 @@ def trigger():
 
 
 if __name__ == "__main__":
-    # Local dev only — Render uses gunicorn (see render.yaml's startCommand).
+    # Local dev only [*] Render uses gunicorn (see render.yaml's startCommand).
     port = int(os.getenv("PORT", "10000"))
     app.run(host="0.0.0.0", port=port)

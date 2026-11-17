@@ -1,9 +1,9 @@
 """
-Layer 1 Pipeline — Market Intelligence
+Layer 1 Pipeline [*] Market Intelligence
 =======================================
 Builds and runs the LangGraph graph:
 
-  START → TrendScout → SupplierFinder → Scorer → Reporter → END
+  START [*] TrendScout [*] SupplierFinder [*] Scorer [*] Reporter [*] END
 
 Usage:
     python -m layer1.pipeline
@@ -11,7 +11,7 @@ Usage:
 
 Configuration:
     All the knobs below (niches, max_trends, regions, etc.) now come from
-    config.json's "layer1" section by default — see config_loader.py.
+    config.json's "layer1" section by default [*] see config_loader.py.
     Pass an explicit argument to run_layer1(...) to override any single
     value for a one-off call without touching config.json.
 """
@@ -32,7 +32,7 @@ load_dotenv()
 from config_loader import get_layer_config
 
 # Fallback defaults, used only if config.json has no "layer1" section at all
-# (or is missing individual keys) — keeps this module importable/runnable
+# (or is missing individual keys) [*] keeps this module importable/runnable
 # even without a config.json present.
 _DEFAULTS = {
     "niches":                   ["fashion", "shoes", "jewelry", "accessories", "wellness"],
@@ -79,9 +79,9 @@ def reporter_node(state: GraphState) -> dict:
     with open(output_path, "w") as f:
         json.dump(winners_data, f, indent=2)
 
-    # ── Console summary ────────────────────────────────────────────────────
+    # [*][*] Console summary [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     print("\n" + "="*60)
-    print("  LAYER 1 COMPLETE — BEAUTY & SKINCARE WINNING PRODUCTS")
+    print("  LAYER 1 COMPLETE [*] BEAUTY & SKINCARE WINNING PRODUCTS")
     print("="*60)
 
     from collections import defaultdict
@@ -96,7 +96,7 @@ def reporter_node(state: GraphState) -> dict:
         print(f"\n[*] {collection_name}")
         print("-" * 50)
         for p in products:
-            icon = source_icon.get(p.source, "•")
+            icon = source_icon.get(p.source, "[*]")
             print(f"\n  #{rank} {icon} {p.title}")
             region_suffix = f"  |  Region: {p.region_label}" if p.region_label else ""
             print(f"      Source:   {p.source}{region_suffix}  |  Tags: {', '.join(p.shopify_tags)}")
@@ -109,7 +109,7 @@ def reporter_node(state: GraphState) -> dict:
             print(f"      CJ Link:  {p.cj_product_url}")
             rank += 1
 
-    # ── Source summary ─────────────────────────────────────────────────────
+    # [*][*] Source summary [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     source_counts: dict = defaultdict(int)
     for p in winners:
         source_counts[p.source] += 1
@@ -121,7 +121,7 @@ def reporter_node(state: GraphState) -> dict:
         }.get(src, src)
         print(f"   {label}: {count}")
 
-    # ── World Trends breakdown by region ────────────────────────────────────
+    # [*][*] World Trends breakdown by region [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     region_counts: dict = defaultdict(int)
     for p in winners:
         if p.region:
@@ -138,7 +138,7 @@ def reporter_node(state: GraphState) -> dict:
 
     print(f"\n[*] Full results saved to: {output_path}")
     print("="*60)
-    print("  → Pass this file to Layer 2 (Listing Generator) to publish products")
+    print("  [*] Pass this file to Layer 2 (Listing Generator) to publish products")
     print("="*60 + "\n")
 
     return {"report_path": str(output_path)}
@@ -164,8 +164,8 @@ def run_layer1(
       via LLM into `max_trends` canonical trend keywords, AND passes through
       SEED_KEYWORDS (capped to `max_seed_keywords` if provided)
     - SupplierFinder searches CJ with each keyword (trend + seed, deduped) twice:
-        pass 1 (sort=orders)  → proven sellers tagged as "trend" or "seed"
-        pass 2 (sort=date)    → new arrivals tagged as "new_arrival"
+        pass 1 (sort=orders)  [*] proven sellers tagged as "trend" or "seed"
+        pass 2 (sort=date)    [*] new arrivals tagged as "new_arrival"
     - PIDs already seen in previous runs are skipped (seen_pids.json)
     - Scorer applies a source bonus so new arrivals compete fairly
     - Products carry shopify_tags: ["Trending Now"], ["New In"], ["Staff Pick"]
@@ -180,15 +180,15 @@ def run_layer1(
             test run, since each seed keyword = 2 CJ API calls.
         max_products_per_keyword: CJ results kept per keyword per sort pass
         regions: which world-trend regions to pull ("US", "Europe", "Korea",
-            "Japan", "LatinAmerica", "Africa" — see REGIONS in
+            "Japan", "LatinAmerica", "Africa" [*] see REGIONS in
             layer1/agents/nodes.py). Pass [] to disable World Trends entirely.
         max_region_trends: number of trend keywords kept PER region after
-            LLM aggregation (each region ≈ max_region_trends × 1 CJ pass)
+            LLM aggregation (each region [*] max_region_trends [*] 1 CJ pass)
 
-    Total unique keywords searched ≈ max_trends + max_seed_keywords (minus
-    any overlap, which is deduped automatically). Total CJ API calls ≈
-    that number × 2 (two sort passes per keyword), PLUS
-    len(regions) × max_region_trends (one sort pass per region keyword).
+    Total unique keywords searched [*] max_trends + max_seed_keywords (minus
+    any overlap, which is deduped automatically). Total CJ API calls [*]
+    that number [*] 2 (two sort passes per keyword), PLUS
+    len(regions) [*] max_region_trends (one sort pass per region keyword).
     """
     cfg = get_layer_config("layer1")
 
@@ -233,11 +233,11 @@ def run_layer1(
         "seen_pids_path":           seen_pids_path,
     }
 
-    print("\n[*] Starting Layer 1 — Beauty & Skincare Market Intelligence Pipeline")
+    print("\n[*] Starting Layer 1 [*] Beauty & Skincare Market Intelligence Pipeline")
     print(f"   Niches: {initial_state['niches']}")
     print(f"   Max trend keywords: {max_trends}")
     print(f"   Max seed keywords: {max_seed_keywords if max_seed_keywords else 'unlimited (~250)'}")
-    print(f"   Products per keyword (×2 passes): {max_products_per_keyword}")
+    print(f"   Products per keyword ([*]2 passes): {max_products_per_keyword}")
     print(f"   World Trends regions: {initial_state['regions'] or 'disabled'}")
     print(f"   Max trend keywords per region: {max_region_trends}")
     print(f"   Seen PIDs cache: {seen_pids_path}\n")
@@ -246,10 +246,10 @@ def run_layer1(
     return final_state
 
 
-# ── Entry point ───────────────────────────────────────────────────────────────
+# [*][*] Entry point [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 if __name__ == "__main__":
-    # All settings now come from config.json's "layer1" section — edit that
+    # All settings now come from config.json's "layer1" section [*] edit that
     # file to change niches / trend counts / regions / etc. instead of this
     # block. Call run_layer1(...) with explicit kwargs here only if you want
     # a one-off override that bypasses config.json for a single run.

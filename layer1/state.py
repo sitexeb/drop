@@ -28,7 +28,7 @@ class Product(BaseModel):
     score: float = 0.0           # composite score assigned by Scorer node
     collection: str = ""         # Shopify collection assigned by LLM scorer
 
-    # ── NEW fields ─────────────────────────────────────────────────────────
+    # [*][*] NEW fields [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     source: str = "seed"         # "trend" | "seed" | "new_arrival" | "region_trend"
     discovery_date: str = ""     # ISO date string, set at parse time
     shopify_tags: List[str] = [] # e.g. ["Trending Now", "New In", "Trend: Korea"]
@@ -36,7 +36,7 @@ class Product(BaseModel):
     collection: str = ""  # Shopify collection assigned by LLM scorer
     sub_collection: str = ""  # NEW: Shopify sub-collection assigned by LLM scorer
 
-    # ── Regional trends ──────────────────────────────────────────────────
+    # [*][*] Regional trends [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     region: str = ""             # "" for non-regional products, else region key
                                   # e.g. "US", "Europe", "Korea", "Japan", "LatinAmerica"
     region_label: str = ""       # human-readable label, e.g. "South Korea"
@@ -60,8 +60,8 @@ class GraphState(TypedDict):
     # --- intermediate ---
     trend_keywords: List[str]              # output of TrendScout node (from Google Trends + social)
     seed_keywords: List[str]              # (possibly capped) SEED_KEYWORDS passed directly to CJ
-    trend_scores: List[tuple]             # [(keyword, score), ...] — avoids re-fetching
-    region_trend_keywords: dict           # {region_key: [(keyword, score), ...], ...} — per-region trends
+    trend_scores: List[tuple]             # [(keyword, score), ...] [*] avoids re-fetching
+    region_trend_keywords: dict           # {region_key: [(keyword, score), ...], ...} [*] per-region trends
     raw_products: List[dict]              # output of SupplierFinder node (raw CJ JSON)
     scored_products: List[Product]        # output of Scorer node
 

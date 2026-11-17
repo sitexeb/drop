@@ -1,25 +1,25 @@
 """
-Layer 2 Pipeline — Store & Listing
+Layer 2 Pipeline [*] Store & Listing
 ====================================
 Graph:
 
   START
-    ↓
-  DuplicateFilter    (check cj_pid registry — skip already published)
-    ↓
+    [*]
+  DuplicateFilter    (check cj_pid registry [*] skip already published)
+    [*]
   ListingGenerator   (SEO title, description, tags, meta)
-    ↓
+    [*]
   PriceOptimizer     (retail price, compare_at, margin)
-    ↓
+    [*]
   ImageAgent         (download, bg removal, resize)
-    ↓
+    [*]
   StorePublisher     (upload images, create product, publish)
-    ↓
+    [*]
   END
 
 Configuration:
     store_url / publish_immediately (and Layer 1's settings, when running
-    the full automated pipeline) come from config.json by default — see
+    the full automated pipeline) come from config.json by default [*] see
     config_loader.py. `python -m layer2.pipeline` picks these up with no
     extra flags needed.
 """
@@ -42,7 +42,7 @@ load_dotenv()
 from config_loader import get_layer_config
 
 
-# ── Duplicate Filter Node ─────────────────────────────────────────────────────
+# [*][*] Duplicate Filter Node [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 def duplicate_filter_node(state: GraphState) -> dict:
     """
@@ -77,7 +77,7 @@ def duplicate_filter_node(state: GraphState) -> dict:
     return {"winning_products": new_products}
 
 
-# ── Graph builder ─────────────────────────────────────────────────────────────
+# [*][*] Graph builder [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 def build_graph() -> StateGraph:
     graph = StateGraph(GraphState)
@@ -98,7 +98,7 @@ def build_graph() -> StateGraph:
     return graph.compile()
 
 
-# ── Runner ────────────────────────────────────────────────────────────────────
+# [*][*] Runner [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 def run_layer2(winning_products: list = None, layer1_json_path: str = None,
                publish_immediately: bool = None) -> dict:
@@ -170,7 +170,7 @@ def run_layer2(winning_products: list = None, layer1_json_path: str = None,
 def run_full_automated_pipeline() -> dict:
     """
     Run Layer 1 and Layer 2 back-to-back automatically.
-    Both layers pull ALL their settings from config.json — nothing to pass
+    Both layers pull ALL their settings from config.json [*] nothing to pass
     in here. This is the main entry point when running python -m layer2.pipeline
 
     Returns:
@@ -180,10 +180,10 @@ def run_full_automated_pipeline() -> dict:
     from layer1.pipeline import run_layer1, REGION_KEYS
 
     print("\n" + "=" * 65)
-    print("  [*] FULL AUTOMATED PIPELINE: Layer 1 → Layer 2")
+    print("  [*] FULL AUTOMATED PIPELINE: Layer 1 [*] Layer 2")
     print("=" * 65)
 
-    # ── PHASE 1: Layer 1 ──────────────────────────────────────────────────
+    # [*][*] PHASE 1: Layer 1 [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     print("\n[*] PHASE 1: Market Intelligence")
     print("-" * 65)
 
@@ -208,7 +208,7 @@ def run_full_automated_pipeline() -> dict:
         print(f"[X] Layer 1 failed with error: {e}")
         raise
 
-    # ── PHASE 2: Layer 2 ──────────────────────────────────────────────────
+    # [*][*] PHASE 2: Layer 2 [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     print("\n[*] PHASE 2: Store & Listing")
     print("-" * 65)
 
@@ -233,7 +233,7 @@ def run_full_automated_pipeline() -> dict:
     }
 
 
-# ── Entry point ───────────────────────────────────────────────────────────────
+# [*][*] Entry point [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 if __name__ == "__main__":
     import sys
@@ -241,7 +241,7 @@ if __name__ == "__main__":
     # Check if user passed a specific Layer 1 JSON file
     if len(sys.argv) > 1:
         json_path = sys.argv[1]
-        print(f"📂 Processing specific Layer 1 output: {json_path}")
+        print(f"[*] Processing specific Layer 1 output: {json_path}")
         run_layer2(layer1_json_path=json_path)
     else:
         # Default: Run full automated pipeline using config.json for both

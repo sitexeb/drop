@@ -59,7 +59,7 @@ def listing_generator_node(state: GraphState) -> dict:
     Generates SEO listing content for each winning product.
     Runs LLM calls with a small batch delay to stay within rate limits.
     """
-    print("\n[ListingGenerator] ✍️  Generating SEO listings...")
+    print("\n[ListingGenerator] [*][*]  Generating SEO listings...")
     errors = list(state.get("errors", []))
     winning_products = state.get("winning_products", [])
 
@@ -108,7 +108,7 @@ Return this exact JSON structure:
     content = content.replace("```json", "").replace("```", "").strip()
     data = json.loads(content)
 
-    # ── Extract tags from multiple sources ──────────────────────────────
+    # [*][*] Extract tags from multiple sources [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     # Get tags from LLM-generated content
     llm_tags = data.get("tags", [])
 
@@ -126,12 +126,12 @@ Return this exact JSON structure:
     else:
         final_tags = llm_tags
 
-    # ── Create the ShopifyListing with ALL fields ──────────────────────
+    # [*][*] Create the ShopifyListing with ALL fields [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     return ShopifyListing(
         # Source (from Layer 1)
         cj_pid=product.get("cj_pid", ""),
         supplier_price=float(product.get("supplier_price", 0)),
-        suggested_retail=float(product.get("suggested_retail", 0) or 0),  # ← ADD THIS
+        suggested_retail=float(product.get("suggested_retail", 0) or 0),  # [*] ADD THIS
         original_title=product.get("title", ""),
         image_urls=(
             product.get("image_urls")

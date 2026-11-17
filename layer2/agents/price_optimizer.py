@@ -3,20 +3,20 @@ Price Optimizer Node
 ====================
 Sets smart retail prices for each listing using:
 
-1. Margin rules        → minimum 20%, target 25%, max 30% (see PRICING_CONFIG)
-2. Psychological pricing → .99 endings, charm pricing
-3. Compare-at price    → creates "sale" perception (was $X, now $Y)
-4. Competitor lookup   → optional SerpAPI Google Shopping check
+1. Margin rules        [*] minimum 20%, target 25%, max 30% (see PRICING_CONFIG)
+2. Psychological pricing [*] .99 endings, charm pricing
+3. Compare-at price    [*] creates "sale" perception (was $X, now $Y)
+4. Competitor lookup   [*] optional SerpAPI Google Shopping check
    (enabled via SERPAPI_KEY in .env, skipped if not set)
 
-No LLM needed here — pure deterministic logic.
+No LLM needed here [*] pure deterministic logic.
 This is intentional: pricing is math, not creativity.
 
 Configuration:
     PRICING_CONFIG's values now come from config.json's
     "layer2.pricing" section by default (see config_loader.py), falling
     back to the hardcoded _DEFAULT_PRICING_CONFIG below if config.json or
-    that section is missing — so this module still works standalone.
+    that section is missing [*] so this module still works standalone.
 """
 
 import os
@@ -28,7 +28,7 @@ from layer2.state import GraphState, ShopifyListing
 from config_loader import get_layer_config
 
 
-# ── Pricing configuration ─────────────────────────────────────────────────────
+# [*][*] Pricing configuration [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 _DEFAULT_PRICING_CONFIG = {
     "min_margin_pct":       20.0,   # never go below this (keeping buffer)
@@ -42,7 +42,7 @@ _layer2_cfg = get_layer_config("layer2")
 PRICING_CONFIG = {**_DEFAULT_PRICING_CONFIG, **_layer2_cfg.get("pricing", {})}
 
 # Price bands for psychological pricing (.99 endings)
-# e.g. $12.40 → $11.99, $45.00 → $44.99
+# e.g. $12.40 [*] $11.99, $45.00 [*] $44.99
 CHARM_ENDINGS = [0.99, 0.95, 0.97]
 
 
@@ -80,12 +80,12 @@ def price_optimizer_node(state: GraphState) -> dict:
             listing.margin_pct = margin
 
             print(f"[PriceOptimizer]   {listing.shopify_title[:40]:40s} "
-                  f"cost=${listing.supplier_price:.2f} → "
+                  f"cost=${listing.supplier_price:.2f} [*] "
                   f"retail=${retail:.2f} (margin {margin:.1f}%)")
 
             # Price each real variant too. StorePublisher reads
             # v['retail_price'] off each variant dict when building the
-            # Shopify variants payload — if we don't set it here, any
+            # Shopify variants payload [*] if we don't set it here, any
             # product with >=2 variants crashes with KeyError downstream.
             listing.variants = _price_variants(listing.variants, listing.supplier_price, retail)
 
@@ -95,7 +95,7 @@ def price_optimizer_node(state: GraphState) -> dict:
             error_msg = f"PriceOptimizer error for '{listing.original_title}': {e}"
             errors.append(error_msg)
             # Still add the listing with a default price so pipeline continues.
-            # Use the configured MINIMUM margin, not an arbitrary 10% — a
+            # Use the configured MINIMUM margin, not an arbitrary 10% [*] a
             # silent 10% fallback margin would undercut the 20% floor set
             # in PRICING_CONFIG for every product that hits this branch.
             cfg = PRICING_CONFIG
@@ -113,13 +113,13 @@ def price_optimizer_node(state: GraphState) -> dict:
 def _calculate_price(cost: float, suggested_retail: Optional[float] = None) -> tuple[float, float, float]:
     """
     Compute retail price. If Layer 1 already supplied a suggested_retail
-    (its tiered cost-based multiplier — see cj_api._calculate_retail_price),
+    (its tiered cost-based multiplier [*] see cj_api._calculate_retail_price),
     use that as the basis instead of recomputing from a flat margin target.
     Layer 1's tiering already handles cheap items correctly (a $1 item needs
     a much higher multiplier to clear fixed per-order costs); Layer 2's old
     flat 25%-margin-target + $5-minimum-profit formula fought that logic and
     produced margins that blew past its own 30% cap on cheap items (e.g. a
-    $1 cost item landed at 49.7% margin instead of the intended ≤30%).
+    $1 cost item landed at 49.7% margin instead of the intended [*]30%).
 
     Falls back to the old margin-target formula only if no suggested_retail
     is available (e.g. a listing that didn't come through Layer 1).
@@ -137,11 +137,11 @@ def _calculate_price(cost: float, suggested_retail: Optional[float] = None) -> t
     retail = _charm_price(raw_retail)
     actual_margin = (retail - cost) / retail * 100
 
-    # Safety floor only — never let a listing go below the minimum margin,
+    # Safety floor only [*] never let a listing go below the minimum margin,
     # regardless of what Layer 1 suggested (protects against a bad/stale
     # CJ price feeding through). No max-margin cap: Layer 1's tiered
     # pricing deliberately runs a higher margin % on cheap items (that's
-    # still only a couple dollars of absolute profit) — capping it back
+    # still only a couple dollars of absolute profit) [*] capping it back
     # down is what caused the mismatch in the first place.
     if actual_margin < cfg["min_margin_pct"]:
         retail = _charm_price(cost / (1 - cfg["min_margin_pct"] / 100))
@@ -174,7 +174,7 @@ def _price_variants(variants: list, listing_cost: float, listing_retail: float) 
                 continue
             except (TypeError, ValueError):
                 pass
-        # No usable per-variant cost — fall back to the listing's price.
+        # No usable per-variant cost [*] fall back to the listing's price.
         v["retail_price"] = listing_retail
 
     return variants
@@ -183,7 +183,7 @@ def _price_variants(variants: list, listing_cost: float, listing_retail: float) 
 def _charm_price(price: float) -> float:
     """
     Round to nearest psychological price point.
-    e.g. $12.43 → $11.99, $47.20 → $46.99
+    e.g. $12.43 [*] $11.99, $47.20 [*] $46.99
     """
     # Round up to next dollar, then subtract 0.01
     ceiling = math.ceil(price)
@@ -221,7 +221,7 @@ def _adjust_for_competition(
         target = competitor_price * 0.95
         retail = max(_charm_price(target), min_retail)
     elif competitor_price > retail * 1.20:
-        # We're much cheaper — raise price slightly (but stay competitive)
+        # We're much cheaper [*] raise price slightly (but stay competitive)
         target = competitor_price * 0.88
         retail = _charm_price(min(target, retail * 1.15))
 

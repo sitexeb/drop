@@ -21,7 +21,7 @@ WINNING_PRODUCTS_PATH = Path("layer1/output/winning_products.json")
 LOOP_CHECK_INTERVAL_SECONDS = 600  # 10 minutes
 
 
-# ── State helpers ────────────────────────────────────────────────────────────
+# [*][*] State helpers [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 def _load_state() -> dict:
     if STATE_PATH.exists():
@@ -29,7 +29,7 @@ def _load_state() -> dict:
             with open(STATE_PATH) as f:
                 return json.load(f)
         except json.JSONDecodeError:
-            print(f"[Scheduler] [!]  {STATE_PATH} is corrupt/unreadable — treating as empty state.")
+            print(f"[Scheduler] [!]  {STATE_PATH} is corrupt/unreadable [*] treating as empty state.")
     return {}
 
 
@@ -46,7 +46,7 @@ def _load_winning_products() -> list:
         with open(WINNING_PRODUCTS_PATH) as f:
             return json.load(f)
     except json.JSONDecodeError:
-        print(f"[Scheduler] [!]  {WINNING_PRODUCTS_PATH} is corrupt/unreadable — treating as empty batch.")
+        print(f"[Scheduler] [!]  {WINNING_PRODUCTS_PATH} is corrupt/unreadable [*] treating as empty batch.")
         return []
 
 
@@ -80,7 +80,7 @@ def _run_layer1_and_reset_state() -> dict:
 
     print(f"\n[OK] Layer 1 complete!")
     print(f"   [*] Found: {len(products)} winning products")
-    print(f"   📁 Saved to: {WINNING_PRODUCTS_PATH}")
+    print(f"   [*] Saved to: {WINNING_PRODUCTS_PATH}")
     print("=" * 70 + "\n")
 
     return state
@@ -104,7 +104,7 @@ def _next_due_at(state: dict, frequency_hours: float, empty_retry_hours: float) 
 
 
 def print_status() -> None:
-    """Read-only view of where things stand — no side effects."""
+    """Read-only view of where things stand [*] no side effects."""
     layer2_cfg = get_layer_config("layer2")
     batch_size = layer2_cfg.get("products_per_publish_run", 5)
     frequency_hours = layer2_cfg.get("publish_frequency_hours", 72)
@@ -119,7 +119,7 @@ def print_status() -> None:
     print(f"  Empty-batch retry (h): {empty_retry_hours}")
 
     if not state:
-        print("  No scheduler state yet — first run will bootstrap it.")
+        print("  No scheduler state yet [*] first run will bootstrap it.")
         return
 
     total = state.get("total_products", 0)
@@ -134,10 +134,10 @@ def print_status() -> None:
 
     if total > 0:
         pct = (idx / total * 100) if total > 0 else 0
-        bar = "█" * int(pct / 5) + "░" * (20 - int(pct / 5))
+        bar = "[*]" * int(pct / 5) + "[*]" * (20 - int(pct / 5))
         print(f"    Progress:            [{bar}] {pct:.1f}%")
 
-    print(f"\n  ⏰ Timing:")
+    print(f"\n  [*] Timing:")
     print(f"    Last tick at:        {state.get('last_run_at') or 'never'}")
     print(f"    Last tick result:    {state.get('last_result') or 'n/a'}")
 
@@ -154,12 +154,12 @@ def print_status() -> None:
 def reset_state() -> None:
     if STATE_PATH.exists():
         STATE_PATH.unlink()
-        print(f"[Scheduler] 🗑️  Deleted {STATE_PATH}. Next tick starts fresh.")
+        print(f"[Scheduler] [*][*]  Deleted {STATE_PATH}. Next tick starts fresh.")
     else:
-        print(f"[Scheduler] ℹ️  No state file at {STATE_PATH} — nothing to reset.")
+        print(f"[Scheduler] [*][*]  No state file at {STATE_PATH} [*] nothing to reset.")
 
 
-# ── Core tick with enhanced logging ─────────────────────────────────────────
+# [*][*] Core tick with enhanced logging [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 def run_tick(force: bool = False) -> None:
     """
@@ -170,28 +170,28 @@ def run_tick(force: bool = False) -> None:
     frequency_hours = layer2_cfg.get("publish_frequency_hours", 72)
     empty_retry_hours = layer2_cfg.get("empty_batch_retry_hours", 6)
 
-    # ── Load state ──────────────────────────────────────────────────────────
+    # [*][*] Load state [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     state = _load_state()
 
     if not state:
-        print("[*] No scheduler state found — initializing with existing winning products...")
+        print("[*] No scheduler state found [*] initializing with existing winning products...")
         state = _adopt_or_reset_batch(_load_winning_products())
         _save_state(state)
         print(f"   [*] Found {state['total_products']} products in current batch")
 
-    # ── Check if due ────────────────────────────────────────────────────────
+    # [*][*] Check if due [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     if not force and not _is_due(state, frequency_hours, empty_retry_hours):
         next_due = _next_due_at(state, frequency_hours, empty_retry_hours)
         wait_seconds = max(0, (next_due - datetime.now()).total_seconds())
 
-        reason = " (retrying soon — last attempt found 0 products)" if state.get("last_result") == "empty" else ""
-        print(f"\n⏳ Waiting for next scheduled tick:")
+        reason = " (retrying soon [*] last attempt found 0 products)" if state.get("last_result") == "empty" else ""
+        print(f"\n[*] Waiting for next scheduled tick:")
         print(f"   Next due at:     {next_due.isoformat()}")
         print(f"   Time remaining:  {wait_seconds / 60:.1f} minutes")
         print(f"   Status:          {state.get('last_result', 'waiting')}{reason}")
         return
 
-    # ── Ensure we have an unexhausted batch ──────────────────────────────
+    # [*][*] Ensure we have an unexhausted batch [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     total = state.get("total_products", 0)
     idx = state.get("next_index", 0)
     remaining = max(total - idx, 0)
@@ -209,14 +209,14 @@ def run_tick(force: bool = False) -> None:
     products = _load_winning_products()
 
     if not products:
-        print("\n[!]  Layer 1 produced 0 winning products — nothing to publish.")
+        print("\n[!]  Layer 1 produced 0 winning products [*] nothing to publish.")
         print(f"   Will retry in ~{empty_retry_hours}h instead of full {frequency_hours}h cycle.")
         state["last_run_at"] = datetime.now().isoformat()
         state["last_result"] = "empty"
         _save_state(state)
         return
 
-    # ── Prepare batch ──────────────────────────────────────────────────────
+    # [*][*] Prepare batch [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     next_index = state.get("next_index", 0)
     batch = products[next_index: next_index + batch_size]
 
@@ -225,7 +225,7 @@ def run_tick(force: bool = False) -> None:
         products = _load_winning_products()
         batch = products[:batch_size]
 
-    # ── Display batch info ────────────────────────────────────────────────
+    # [*][*] Display batch info [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     batch_start = next_index + 1
     batch_end = next_index + len(batch)
     print(f"\n[*] Publishing batch #{batch_start}-{batch_end} of {len(products)} total products")
@@ -233,10 +233,10 @@ def run_tick(force: bool = False) -> None:
     print(f"   Remaining after:   {len(products) - batch_end} products")
     print("-" * 60)
 
-    # ── Run Layer 2 ────────────────────────────────────────────────────────
+    # [*][*] Run Layer 2 [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     l2_state = run_layer2(winning_products=batch)
 
-    # ── Results ────────────────────────────────────────────────────────────
+    # [*][*] Results [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     published = len(l2_state.get("published_listings", []))
     failed = len(l2_state.get("failed_listings", []))
 
@@ -249,11 +249,11 @@ def run_tick(force: bool = False) -> None:
 
     # Progress bar
     pct = (batch_end / len(products) * 100) if len(products) > 0 else 0
-    bar = "█" * int(pct / 5) + "░" * (20 - int(pct / 5))
+    bar = "[*]" * int(pct / 5) + "[*]" * (20 - int(pct / 5))
     print(f"  Progress:          [{bar}] {pct:.1f}%")
     print("=" * 60)
 
-    # ── Update state ──────────────────────────────────────────────────────
+    # [*][*] Update state [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     state["next_index"] = next_index + len(batch)
     state["total_products"] = len(products)
     state["last_run_at"] = datetime.now().isoformat()
@@ -269,7 +269,7 @@ def run_tick(force: bool = False) -> None:
         print(f"\n[*] Batch fully consumed! Next tick will trigger Layer 1 for a fresh batch.")
 
 
-# ── Entry point with enhanced loop logging ─────────────────────────────────
+# [*][*] Entry point with enhanced loop logging [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 def main():
     parser = argparse.ArgumentParser(
@@ -285,7 +285,7 @@ def main():
                              "rely on cron/systemd.")
     parser.add_argument("--force", action="store_true",
                         help="Ignore the frequency check and publish immediately. "
-                             "Intended for use with --once for manual/testing runs — "
+                             "Intended for use with --once for manual/testing runs [*] "
                              "combining with --loop will publish on every poll.")
     parser.add_argument("--status", action="store_true",
                         help="Print current batch/queue status and exit. No side effects.")
@@ -315,7 +315,7 @@ def main():
         while True:
             tick_count += 1
             print(f"\n{'=' * 70}")
-            print(f"[*] SCHEDULER TICK #{tick_count} — {datetime.now().isoformat()}")
+            print(f"[*] SCHEDULER TICK #{tick_count} [*] {datetime.now().isoformat()}")
             print(f"{'=' * 70}")
 
             try:
@@ -326,11 +326,11 @@ def main():
                 traceback.print_exc()
 
             # Countdown to next check
-            print(f"\n⏰ Next check in {LOOP_CHECK_INTERVAL_SECONDS}s...")
+            print(f"\n[*] Next check in {LOOP_CHECK_INTERVAL_SECONDS}s...")
 
             # Animated countdown
             for remaining in range(LOOP_CHECK_INTERVAL_SECONDS // 10, 0, -1):
-                print(f"\r   {'⏳' * (remaining % 5)} {remaining * 10}s remaining", end="")
+                print(f"\r   {'[*]' * (remaining % 5)} {remaining * 10}s remaining", end="")
                 time.sleep(10)
             print("\r   " + " " * 40 + "\r", end="")
 

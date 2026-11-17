@@ -22,7 +22,7 @@ CJ_VIDEO_REFERER = "https://developers.cjdropshipping.com/"
 # price, so a "Black" variant and a "Green" variant of the same product
 # carry the same margin logic. Kept as one constant so parse_cj_product()
 # and get_product_variant_list() can never drift out of sync.
-# Now sourced from config.json's layer1.cj_price_multiplier — falls back to
+# Now sourced from config.json's layer1.cj_price_multiplier [*] falls back to
 # 1.33 (10% margin, profit is 10% of retail) if config.json or that key is
 # missing, so this module still works standalone.
 try:
@@ -36,13 +36,13 @@ _MAX_RETRIES = 3
 _RETRY_BACKOFF_BASE = 2.0        # seconds, network errors: 2s, 4s, 8s
 _RATE_LIMIT_BACKOFF_BASE = 5.0   # seconds, HTTP 429/5xx: 5s, 10s, 20s
 
-# ── Shared session (connection pooling / keep-alive) ────────────────────────
+# [*][*] Shared session (connection pooling / keep-alive) [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 # Every CJ call previously went through the bare requests.request(...)
 # convenience function, which opens a brand-new TCP+TLS connection from
 # scratch on EVERY call, even to the same host back-to-back. That means
 # every request pays full connection-setup latency, and any transient
 # handshake slowness/jitter shows up as a ConnectTimeout on the very FIRST
-# attempt of every product — which is what "ConnectTimeout on every
+# attempt of every product [*] which is what "ConnectTimeout on every
 # product" in production looks like. A shared Session with a pooled
 # HTTPAdapter reuses the underlying TCP+TLS connection across calls to the
 # same host, so only the very first request in a run pays the full
@@ -52,14 +52,14 @@ _adapter = requests.adapters.HTTPAdapter(pool_connections=10, pool_maxsize=10)
 _session.mount("https://", _adapter)
 _session.mount("http://", _adapter)
 
-# (connect_timeout, read_timeout) — a bit more headroom on connect since
+# (connect_timeout, read_timeout) [*] a bit more headroom on connect since
 # that's the phase seeing timeouts, without also stretching how long we
 # wait on a stalled read.
 _CJ_TIMEOUT = (15, 25)
 
 def _calculate_retail_price(supplier_price: float) -> float:
     """
-    Tiered markup — a flat multiplier badly underprices cheap items, since
+    Tiered markup [*] a flat multiplier badly underprices cheap items, since
     fixed per-order costs (payment processing ~2.9%+$0.30, etc.) don't
     scale down with price. Cheap items need a much higher multiplier just
     to clear those fixed costs and leave real profit.
@@ -81,7 +81,7 @@ def _request_with_retry(method: str, url: str, **kwargs) -> requests.Response:
     """
     Wraps requests with retry-on-failure and backoff. Retries on:
       - network-level issues (ConnectTimeout, ConnectionError, ReadTimeout)
-      - HTTP 429 (rate limited) and 5xx server errors — these are valid
+      - HTTP 429 (rate limited) and 5xx server errors [*] these are valid
         HTTP responses, not exceptions, so they need their own check here
         rather than relying on the network-error except block below.
         Honors a Retry-After response header when CJ provides one; falls
@@ -90,7 +90,7 @@ def _request_with_retry(method: str, url: str, **kwargs) -> requests.Response:
         limit right now," not "this one request glitched."
     Returns the (possibly still-failing) response after exhausting retries
     so the caller's existing raise_for_status()/error handling still fires
-    as before — this function only adds retries, it doesn't change what
+    as before [*] this function only adds retries, it doesn't change what
     counts as a final failure.
     Uses the shared, connection-pooled _session (see above) instead of
     requests.request() so repeated calls to the same host reuse their
@@ -107,7 +107,7 @@ def _request_with_retry(method: str, url: str, **kwargs) -> requests.Response:
             if attempt < _MAX_RETRIES:
                 wait = _RETRY_BACKOFF_BASE * (2 ** (attempt - 1))
                 print(f"[CJ]   [!] Network error (attempt {attempt}/{_MAX_RETRIES}) on {url.split('?')[0]}: "
-                      f"{type(e).__name__} — retrying in {wait:.0f}s...")
+                      f"{type(e).__name__} [*] retrying in {wait:.0f}s...")
                 time.sleep(wait)
                 continue
             else:
@@ -128,7 +128,7 @@ def _request_with_retry(method: str, url: str, **kwargs) -> requests.Response:
                 else:
                     wait = _RATE_LIMIT_BACKOFF_BASE * (2 ** (attempt - 1))
                 print(f"[CJ]   [!] HTTP {resp.status_code} (attempt {attempt}/{_MAX_RETRIES}) on "
-                      f"{url.split('?')[0]} — retrying in {wait:.0f}s...")
+                      f"{url.split('?')[0]} [*] retrying in {wait:.0f}s...")
                 time.sleep(wait)
                 continue
             else:
@@ -249,7 +249,7 @@ def _parse_price(price_val) -> float:
 
 def _filter_products(products: List[dict], max_price: float) -> List[dict]:
     """
-    Relaxed filters — only remove products with no image or price=0.
+    Relaxed filters [*] only remove products with no image or price=0.
     Let the Scorer node handle quality ranking.
     """
     filtered = []
@@ -286,7 +286,7 @@ def parse_cj_product(raw: dict, trend_keyword: str, trend_score: int) -> dict:
     orders_count  = int(raw.get("listedNum") or raw.get("sellCount") or 0)
 
     # NOTE: previously this read raw["productWeight"] (the item's physical
-    # weight in kg/g) into "rating" — a copy/paste bug that fed the Scorer
+    # weight in kg/g) into "rating" [*] a copy/paste bug that fed the Scorer
     # pure noise labeled as a 0-5 supplier rating (weight values would
     # frequently clamp to the 1.0-5.0 bound in either direction regardless
     # of actual product quality). CJ's /product/list search response does
@@ -321,11 +321,11 @@ def parse_cj_product(raw: dict, trend_keyword: str, trend_score: int) -> dict:
     video_urls = media["videos"]
     # print(f"[CJ]   Found {len(image_urls)} images, {len(video_urls)} videos")
     # if video_urls:
-    #     print(f"[CJ]     ↳ video[0]: {video_urls[0]}")
+    #     print(f"[CJ]     [*] video[0]: {video_urls[0]}")
 
     time.sleep(0.5)  # pacing gap before the variant-list call
 
-    # Fetch all color/size variants for this product — this is what lets
+    # Fetch all color/size variants for this product [*] this is what lets
     # the storefront show a "Black / Green / Yellow" selector instead of
     # publishing only the single main variant.
     variants = get_product_variant_list(pid)
@@ -383,22 +383,22 @@ def get_product_variant_list(pid: str) -> List[dict]:
         GET /product/variant/query?pid={pid}
 
     (Distinct from /product/variant/queryByVid, which fetches ONE variant
-    by its own vid — that's a different lookup, not what we need here.)
+    by its own vid [*] that's a different lookup, not what we need here.)
 
-    CJ does NOT return a separate "option name" (e.g. "Color") — each
+    CJ does NOT return a separate "option name" (e.g. "Color") [*] each
     variant just has a `variantKey` string like "Black" or "Black-XXL"
     (hyphen-joined values with no documented label). We use that raw
     string as-is as a single Shopify option value ("option_value" below),
     which is the only 100%-reliable interpretation without guessing at
     CJ's internal naming conventions. If a product varies by both color
     AND size, the dropdown will show combined values like "Black-XXL"
-    rather than two separate Color/Size selectors — still fully
+    rather than two separate Color/Size selectors [*] still fully
     selectable, just not split into two option columns.
 
     Deduplicates by option_value (CJ occasionally lists the same variant
-    twice across warehouses) — keeps the first occurrence.
+    twice across warehouses) [*] keeps the first occurrence.
 
-    Returns [] on any failure or if the product has no variant data —
+    Returns [] on any failure or if the product has no variant data [*]
     callers should treat that as "single-variant product" and fall back
     to today's default-variant behavior.
     """
@@ -431,7 +431,7 @@ def get_product_variant_list(pid: str) -> List[dict]:
             except (TypeError, ValueError):
                 supplier_price = 0.0
             if supplier_price <= 0:
-                continue  # unusable — skip rather than publish a $0 variant
+                continue  # unusable [*] skip rather than publish a $0 variant
 
             retail_price = round(supplier_price * CJ_PRICE_MULTIPLIER, 2)
 
@@ -459,7 +459,7 @@ def get_product_videos(pid: str) -> List[str]:
     """
     Fetch REAL, playable video URLs via CJ's dedicated video resolver:
         POST /product/queryVideosByProductId, body {"productId": pid}
-    Returns [] on any failure — video is a bonus asset, never worth
+    Returns [] on any failure [*] video is a bonus asset, never worth
     failing product ingestion over.
     """
     token = _get_token()
@@ -533,13 +533,13 @@ def download_video(video_url: str, dest_path: str, timeout: int = 60) -> bool:
 
 
 def get_product_variants(pid: str) -> Optional[dict]:
-    """Backward-compat alias — this is the OLD single-object detail fetch,
+    """Backward-compat alias [*] this is the OLD single-object detail fetch,
     NOT the variant list. Use get_product_variant_list(pid) for variants."""
     return get_product_detail(pid)
 
 
 def get_all_images(pid: str, main_image: str) -> list:
-    """Backward-compat wrapper — images only. Prefer get_all_media()."""
+    """Backward-compat wrapper [*] images only. Prefer get_all_media()."""
     return get_all_media(pid, main_image)["images"]
 
 
@@ -551,10 +551,10 @@ def get_all_media(pid: str, main_image: str) -> dict:
     detail = get_product_detail(pid, features=["enable_video"])
     if not detail:
         print(f"[CJ]   [!] pid {pid}: falling back to main image only "
-              f"(detail fetch failed after retries — see error above)")
+              f"(detail fetch failed after retries [*] see error above)")
         return {"images": [main_image] if main_image else [], "videos": []}
 
-    # ── Images ──────────────────────────────────────────────────────────
+    # [*][*] Images [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     image_urls: list = []
     image_set = detail.get("productImageSet")
     if image_set is None:
@@ -585,7 +585,7 @@ def get_all_media(pid: str, main_image: str) -> dict:
             seen_img.add(url)
             unique_images.append(url)
 
-    # ── Videos ──────────────────────────────────────────────────────────
+    # [*][*] Videos [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
     has_video_signal = bool(detail.get("isVideo") in (1, "1", True)) or bool(detail.get("productVideo"))
     video_urls: List[str] = []
     if has_video_signal:

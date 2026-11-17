@@ -1,5 +1,5 @@
 """
-Trends Tool — Google Trends + TikTok + Instagram, all via Apify Actors
+Trends Tool [*] Google Trends + TikTok + Instagram, all via Apify Actors
 ========================================================================
 Single source for every trend signal the pipeline uses: Google Trends
 (related/rising queries per seed keyword), TikTok (Creative Center trending
@@ -163,30 +163,30 @@ TIMEFRAME_OPTIONS = {
     #    'now 1-H', 'now 4-H', 'now 1-d', 'now 7-d', 'today 1-m',
     #    'today 3-m', 'today 12-m', 'today 5-y', 'all'"
     # If this actor changes again, that 400 error body (now logged in
-    # _run_actor_sync) will show the new allowed list directly — no more
+    # _run_actor_sync) will show the new allowed list directly [*] no more
     # guessing from Apify Store docs pages.
     "short": "now 7-d",
     "medium": "today 3-m",
     "long": "today 12-m",
 }
-# ── SAFE CATEGORIES FILTER ──────────────────────────────────────────────────
+# [*][*] SAFE CATEGORIES FILTER [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 # These are the only product categories we want to keep trends for.
 # Any trend hashtag/keyword that doesn't match these categories will be
 # filtered out. Shared by Google Trends, TikTok, and Instagram results.
 
 SAFE_CATEGORY_KEYWORDS = {
-    # Fashion — Dresses
+    # Fashion [*] Dresses
     "dress", "maxi dress", "midi dress", "mini dress", "evening dress",
     "party dress", "bodycon dress", "sweater dress",
 
-    # Fashion — Tops
+    # Fashion [*] Tops
     "t-shirt", "tshirt", "blouse", "shirt", "tank top", "bodysuit",
     "crop top", "sweater", "hoodie",
 
-    # Fashion — Bottoms
+    # Fashion [*] Bottoms
     "jeans", "pants", "leggings", "shorts", "skirt",
 
-    # Fashion — Sets & Outerwear
+    # Fashion [*] Sets & Outerwear
     "lounge set", "two piece set", "knit set", "active set",
     "jacket", "coat", "blazer", "cardigan", "vest", "outerwear",
 
@@ -200,32 +200,32 @@ SAFE_CATEGORY_KEYWORDS = {
     "ring", "stackable ring", "statement ring",
     "watch", "anklet",
 
-    # Accessories — Bags
+    # Accessories [*] Bags
     "tote bag", "crossbody bag", "shoulder bag", "handbag", "backpack",
     "mini bag", "evening bag", "bag",
 
-    # Accessories — Other
+    # Accessories [*] Other
     "sunglasses", "hair clip", "headband", "scrunchie", "hair claw",
     "belt", "wallet", "card holder",
     "phone case", "phone strap", "magsafe",
     "cosmetic bag", "jewelry case", "travel organizer", "passport holder", "luggage tag",
 
-    # Wellness — Fitness / Yoga
+    # Wellness [*] Fitness / Yoga
     "resistance band", "dumbbell", "jump rope", "pilates",
     "yoga mat", "yoga block", "yoga strap", "yoga",
 
-    # Wellness — Recovery / Massage
+    # Wellness [*] Recovery / Massage
     "foam roller", "stretch", "recovery ball", "massage gun",
     "massage roller", "foot massager", "massager",
 
-    # Wellness — Posture / Hydration
+    # Wellness [*] Posture / Hydration
     "back support", "posture corrector", "seat cushion",
     "water bottle", "tumbler", "shaker", "hydration",
 }
 
 # Keywords to EXCLUDE (trends containing these will be filtered out)
 EXCLUDED_KEYWORDS = {
-    # Skincare & beauty consumables — no longer any collection for these
+    # Skincare & beauty consumables [*] no longer any collection for these
     "oil", "oils", "essential oil", "serum", "cream", "lotion", "moisturizer",
     "balm", "cleanser", "toner", "exfoliator", "scrub", "sheet mask",
     "sunscreen", "spf", "shampoo", "conditioner", "hair mask", "hairspray",
@@ -253,7 +253,7 @@ EXCLUDED_KEYWORDS = {
 import random
 
 # Fallback used only if config.json (or its layer1.seed_categories key) is
-# missing — keeps this module importable/runnable standalone. The "real"
+# missing [*] keeps this module importable/runnable standalone. The "real"
 # categories now live in config.json's layer1.seed_categories, so you can
 # add/remove/edit seed keywords per collection without touching code.
 _DEFAULT_SEED_CATEGORIES = {
@@ -288,7 +288,7 @@ _DEFAULT_SEED_CATEGORIES = {
     ],
 }
 
-# Lifestyle/aesthetic discovery keywords — not tied to any one collection,
+# Lifestyle/aesthetic discovery keywords [*] not tied to any one collection,
 # kept as a separate list (config.json: layer1.lifestyle_keywords) same as
 # before.
 _DEFAULT_LIFESTYLE_KEYWORDS = [
@@ -299,7 +299,7 @@ _DEFAULT_LIFESTYLE_KEYWORDS = [
 
 # To add/remove/edit seed keywords per collection: edit config.json's
 # layer1.seed_categories (and layer1.lifestyle_keywords for the aesthetic
-# ones) — nothing else needs to change, SEED_KEYWORDS below is derived
+# ones) [*] nothing else needs to change, SEED_KEYWORDS below is derived
 # from these automatically.
 SEED_CATEGORIES = _layer1_cfg.get("seed_categories") or _DEFAULT_SEED_CATEGORIES
 LIFESTYLE_KEYWORDS = _layer1_cfg.get("lifestyle_keywords", _DEFAULT_LIFESTYLE_KEYWORDS)
@@ -401,7 +401,7 @@ def _flatten_seed_categories(categories: dict, lifestyle: list) -> List[str]:
 
 SEED_KEYWORDS = _flatten_seed_categories(SEED_CATEGORIES, LIFESTYLE_KEYWORDS)
 
-# ── Dynamic fallback scoring (ported from google_trends.py) ────────────────
+# [*][*] Dynamic fallback scoring (ported from google_trends.py) [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 # Used when the Google Trends actor fails/returns nothing -- keeps the
 # pipeline producing SOME trend signal (SerpAPI Google Shopping data if
 # SERPAPI_KEY is set, else deterministic-with-jitter scoring) rather than
@@ -702,11 +702,11 @@ def _is_product_keyword(kw: str) -> bool:
     return not any(skip in kw.lower() for skip in skip_words) and len(kw) > 3
 
 
-# ── Apify runner ───────────────────────────────────────────────────────────
+# [*][*] Apify runner [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 def _run_actor_sync(actor_id: str, run_input: dict, timeout: int = 120) -> List[dict]:
     if not APIFY_API_TOKEN:
-        print(f"[Apify] [!] APIFY_API_TOKEN not set — skipping {actor_id}.")
+        print(f"[Apify] [!] APIFY_API_TOKEN not set [*] skipping {actor_id}.")
         return []
 
     url_actor_id = actor_id.replace("/", "~")
@@ -717,7 +717,7 @@ def _run_actor_sync(actor_id: str, run_input: dict, timeout: int = 120) -> List[
         if not resp.ok:
             # Apify's 400 responses carry a JSON body like
             # {"error": {"type": "invalid-input", "message": "..."}}
-            # which tells you EXACTLY which field/value it rejected —
+            # which tells you EXACTLY which field/value it rejected [*]
             # far more useful than guessing at the schema from docs.
             try:
                 err_body = resp.json()
@@ -736,7 +736,7 @@ def _run_actor_sync(actor_id: str, run_input: dict, timeout: int = 120) -> List[
         return []
 
 
-# ── Google Trends (via Apify actor) ─────────────────────────────────────────
+# [*][*] Google Trends (via Apify actor) [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 def _fetch_google_trends(keywords: List[str], geo: str, timeframe: str) -> Dict[str, int]:
     """
@@ -795,7 +795,7 @@ def _parse_google_trends_items(items: List[dict]) -> Dict[str, int]:
           "relatedType": "top"|"rising", "formattedValue": "100"|"Breakout", "link": "..."}
          value is already 0-100 (Breakout rows arrive with value=100 already), so no
          extra clipping/translation needed. This actor's keyword-mode dataset also
-         contains "interestOverTime" and "regionalInterest" typed rows mixed in —
+         contains "interestOverTime" and "regionalInterest" typed rows mixed in [*]
          those intentionally fall through unmatched below and are skipped, since we
          only want relatedQuery rows for keyword aggregation.
       1. Fallback (agenscrape/google-trends-scraper, if APIFY_GOOGLE_TRENDS_ACTOR is
@@ -880,7 +880,7 @@ def _parse_google_trends_items(items: List[dict]) -> Dict[str, int]:
                 matched = True
 
         # Rows we expect and intentionally ignore (this actor's own
-        # interestOverTime/regionalInterest rows in keyword mode) — don't
+        # interestOverTime/regionalInterest rows in keyword mode) [*] don't
         # warn on these, they're not a parsing failure.
         if not matched and item.get("type") in ("interestOverTime", "regionalInterest"):
             continue
@@ -961,7 +961,7 @@ def get_trending_keywords(
         results = _fetch_google_trends(seeds, geo, timeframe)
 
     if not results:
-        print("[GoogleTrends] [OK] Actor returned nothing — using dynamic fallback scoring.")
+        print("[GoogleTrends] [OK] Actor returned nothing [*] using dynamic fallback scoring.")
         results = _get_dynamic_fallback_keywords()
 
     if not results:
@@ -1035,7 +1035,7 @@ def _get_intelligent_random_scores() -> dict:
     return scores
 
 
-# ── TikTok ───────────────────────────────────────────────────────────────
+# [*][*] TikTok [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 def _fetch_tiktok_trends(max_keywords: int, country: str) -> Dict[str, int]:
     """
@@ -1043,7 +1043,7 @@ def _fetch_tiktok_trends(max_keywords: int, country: str) -> Dict[str, int]:
     data_xplorer/tiktok-trends actor. Returns {hashtag: score} normalised
     0-100, filtered to only safe product categories.
 
-    Confirmed input schema (verified against a real run — 2026-07-01,
+    Confirmed input schema (verified against a real run [*] 2026-07-01,
     countryCode=FR returned real Creative Center data, not a fallback stub):
         maxItems            int
         proxyConfiguration   {"useApifyProxy": true}
@@ -1054,7 +1054,7 @@ def _fetch_tiktok_trends(max_keywords: int, country: str) -> Dict[str, int]:
         industryId            "" for all industries, or a specific industry filter
 
     Confirmed hashtag output item shape (real fields, note the spaced/
-    capitalized keys — NOT camelCase):
+    capitalized keys [*] NOT camelCase):
         {"Rank": 1, "Hashtag": "#brevet", "Hashtag ID": "8428894",
          "Posts": 39104, "Video Views": 209392029,
          "Industries": ["Education"], "Country": "France",
@@ -1066,7 +1066,7 @@ def _fetch_tiktok_trends(max_keywords: int, country: str) -> Dict[str, int]:
     We previously defaulted to automation-lab/tiktok-trends-scraper, but a
     real test run showed it silently returning a placeholder/fallback
     payload (near-zero view counts on generic hashtags like #fyp) instead
-    of erroring — this actor returned verified real data on the same kind
+    of erroring [*] this actor returned verified real data on the same kind
     of query, so it's the default now.
     """
     run_input = {
@@ -1114,13 +1114,13 @@ def _parse_magnitude(value) -> float:
     """
     Parses the actor's human-readable magnitude strings into a number, e.g.
     "36.27 M" -> 36270000.0, "149.66 m" -> 149660000.0, "317.57 k" -> 317570.0,
-    "4060" -> 4060.0, "—" / "" / None -> 0.0.
+    "4060" -> 4060.0, "[*]" / "" / None -> 0.0.
     Suffix is case-insensitive: k=thousand, m=million, g or b=billion.
     """
     if value is None:
         return 0.0
     s = str(value).strip().lower().replace(",", "")
-    if not s or s in ("—", "-", "n/a"):
+    if not s or s in ("[*]", "-", "n/a"):
         return 0.0
     multiplier = 1.0
     if s.endswith("k"):
@@ -1138,7 +1138,7 @@ def _parse_magnitude(value) -> float:
 # Apify's instagram-hashtag-analytics-scraper rejects the ENTIRE batch call
 # if even ONE hashtag in the list fails its input validation pattern:
 #   ^[^!?.,:;\-+=*&%$#@/\~^|<>()[\]{}"'`\s]+$
-# i.e. no punctuation, no whitespace — hyphens included. A seed keyword like
+# i.e. no punctuation, no whitespace [*] hyphens included. A seed keyword like
 # "t-shirt" (hyphen) or "old money style" (already space-stripped, but a
 # keyword with an apostrophe, e.g. a future "women's" entry, would hit the
 # same problem) silently kills every hashtag in that call, not just the bad
@@ -1155,18 +1155,18 @@ def _fetch_instagram_trends(seed_hashtags: List[str], max_keywords: int) -> Dict
     """
     Queries apify/instagram-hashtag-analytics-scraper with seed hashtags
     drawn from your SEED_KEYWORDS list, and pulls both the queried
-    hashtags' own post volume AND their close related-hashtag network —
+    hashtags' own post volume AND their close related-hashtag network [*]
     related hashtags are how "discovery" happens here, since Instagram has
     no public trending-by-niche feed.
 
     Confirmed input schema (verified against a real run):
         hashtags            list[str], no "#" prefix
-        includeLatestPosts   bool  (we pass False — we only want stats, not posts)
-        includeTopPosts      bool  (we pass False — same reason, keeps cost down)
+        includeLatestPosts   bool  (we pass False [*] we only want stats, not posts)
+        includeTopPosts      bool  (we pass False [*] same reason, keeps cost down)
 
-    Confirmed output item shape (real fields — verified 2026-07):
+    Confirmed output item shape (real fields [*] verified 2026-07):
         {"name": "skincareroutine", "id": "skincareroutine",
-         "postsCount": 36270000, "posts": "36.27 M", "postsPerDay": "—",
+         "postsCount": 36270000, "posts": "36.27 M", "postsPerDay": "[*]",
          "url": "...",
          "related":        [{"hash": "#skincare", "info": "149.66 m"}, ...],
          "frequent":       [{"hash": "#skincareroutine", "info": "36.27 m"}, ...],
@@ -1177,7 +1177,7 @@ def _fetch_instagram_trends(seed_hashtags: List[str], max_keywords: int) -> Dict
     back with just {"name", "postsCount": 0, "url", "id"} and nothing else.
 
     NOTE: we deliberately skip the relatedFrequent/relatedAverage/relatedRare
-    buckets — those surface very generic tags (#love, #instagood, #fashion)
+    buckets [*] those surface very generic tags (#love, #instagood, #fashion)
     that aren't specific to the beauty niche and would just add noise.
     "related"/"frequent"/"average"/"rare" (the ones tied directly to the
     queried hashtag) are specific enough to be useful.
@@ -1238,13 +1238,13 @@ def _normalize_0_100(scores: Dict[str, int]) -> Dict[str, int]:
     return {k: int(50 + (v - lo) / (hi - lo) * 50) for k, v in scores.items()}
 
 
-# ── Weekly cache ─────────────────────────────────────────────────────────
+# [*][*] Weekly cache [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 def _cache_path_for(country: str) -> str:
     """
     Per-country cache file. IMPORTANT: this is keyed by country because the
     pipeline now calls get_social_trending_keywords() once per world-trends
-    region (US/GB/KR/JP/BR...) with a different `country` each time — a
+    region (US/GB/KR/JP/BR...) with a different `country` each time [*] a
     single shared cache file would silently serve Korea's trends back to
     Japan's request (or overwrite one country's cache with another's).
     The base CACHE_PATH is used as-is only for the default/global country.
@@ -1275,7 +1275,7 @@ def _save_cache(scores: Dict[str, int], country: str = DEFAULT_COUNTRY) -> None:
         json.dump({"timestamp": datetime.now().isoformat(), "scores": scores}, f, indent=2)
 
 
-# ── Public entry point ──────────────────────────────────────────────────
+# [*][*] Public entry point [*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*][*]
 
 def get_social_trending_keywords(
     seed_keywords: List[str],
@@ -1301,7 +1301,7 @@ def get_social_trending_keywords(
             print(f"[SocialTrends] [OK] Using cached social trends for {country} (< {MAX_CACHE_AGE_DAYS}d old, {len(filtered_cache)} safe keywords)")
             return sorted(filtered_cache.items(), key=lambda x: x[1], reverse=True)[:max_keywords]
 
-    print(f"[SocialTrends] [*] Cache stale or missing for {country} — calling Apify actors (this spends Apify credit)...")
+    print(f"[SocialTrends] [*] Cache stale or missing for {country} [*] calling Apify actors (this spends Apify credit)...")
 
     tiktok_scores = _fetch_tiktok_trends(max_keywords, country)
     print(f"[SocialTrends]   TikTok: {len(tiktok_scores)} safe hashtags")
@@ -1322,6 +1322,6 @@ def get_social_trending_keywords(
         _save_cache(merged, country)
         print(f"[SocialTrends] [OK] Saved {len(merged)} safe social trends to cache for {country}")
     else:
-        print("[SocialTrends] [!] No safe results from either platform — cache left untouched.")
+        print("[SocialTrends] [!] No safe results from either platform [*] cache left untouched.")
 
     return sorted(merged.items(), key=lambda x: x[1], reverse=True)[:max_keywords]

@@ -2,7 +2,7 @@
 config_loader.py
 =================
 Single source of truth for pipeline-level settings (as opposed to secrets,
-which stay in .env — API keys, tokens, etc. never belong in config.json).
+which stay in .env [*] API keys, tokens, etc. never belong in config.json).
 
 Layout:
     <repo root>/
@@ -64,6 +64,6 @@ def get_layer_config(layer: str) -> Dict[str, Any]:
     cfg = load_config()
     section = cfg.get(layer)
     if section is None:
-        print(f"[Config] [!] No '{layer}' section in config.json — using code defaults.")
+        print(f"[Config] [!] No '{layer}' section in config.json [*] using code defaults.")
         return {}
     return section

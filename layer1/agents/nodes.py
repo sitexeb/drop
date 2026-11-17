@@ -771,7 +771,7 @@ def _fallback_aggregate_trends(combined_trends: list, max_count: int, label: str
 
     sorted_categories = sorted(safe_scores.items(), key=lambda x: x[1], reverse=True)[:max_count]
     filtered_keywords = [cat for cat, _ in sorted_categories]
-    print(f"[TrendScout] [{label}] ↩️ Fallback (non-LLM) keywords: {filtered_keywords}")
+    print(f"[TrendScout] [{label}] [*] Fallback (non-LLM) keywords: {filtered_keywords}")
     return filtered_keywords, sorted_categories
 
 

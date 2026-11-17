@@ -77,10 +77,10 @@ def listing_generator_node(state: GraphState) -> dict:
             listings.append(listing)
         except Exception as e:
             error_msg = f"ListingGenerator failed for '{product.get('title', '?')}': {e}"
-            print(f"[ListingGenerator] ❌ {error_msg}")
+            print(f"[ListingGenerator] [X] {error_msg}")
             errors.append(error_msg)
 
-    print(f"[ListingGenerator] ✅ Generated {len(listings)} listings")
+    print(f"[ListingGenerator] [OK] Generated {len(listings)} listings")
     return {"listings": listings, "errors": errors}
 
 

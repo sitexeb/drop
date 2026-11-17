@@ -75,7 +75,7 @@ def _wire_persistent_disk() -> None:
     """
     disk_path = os.getenv("PERSISTENT_DISK_PATH") or os.getenv("RENDER_DISK_PATH")
     if not disk_path:
-        print("[Server] ⚠️  PERSISTENT_DISK_PATH not set — using EPHEMERAL local storage. "
+        print("[Server] [!]  PERSISTENT_DISK_PATH not set — using EPHEMERAL local storage. "
               "This is fine for local testing but will lose seen_pids/publish_state/"
               "winning_products on every redeploy. Set PERSISTENT_DISK_PATH + attach a "
               "persistent volume (e.g. a Railway Volume) for production.")
@@ -94,7 +94,7 @@ def _wire_persistent_disk() -> None:
             continue  # already wired up from a previous startup
 
         if local_path.exists():
-            print(f"[Server] ⚠️  {local_path} already exists as a real directory — "
+            print(f"[Server] [!]  {local_path} already exists as a real directory — "
                   f"leaving it as-is (NOT symlinked to the persistent disk). Delete it "
                   f"manually (once) if you want it backed by the persistent disk instead.")
             continue
@@ -102,9 +102,9 @@ def _wire_persistent_disk() -> None:
         local_path.parent.mkdir(parents=True, exist_ok=True)
         try:
             local_path.symlink_to(target, target_is_directory=True)
-            print(f"[Server] ✅ Symlinked {local_path} -> {target}")
+            print(f"[Server] [OK] Symlinked {local_path} -> {target}")
         except OSError as e:
-            print(f"[Server] ⚠️  Could not symlink {local_path} -> {target}: {e}")
+            print(f"[Server] [!]  Could not symlink {local_path} -> {target}: {e}")
 
 
 # ── Background scheduler loop ────────────────────────────────────────────────
@@ -115,14 +115,14 @@ def _background_loop() -> None:
               f"(SCHEDULER_INITIAL_DELAY_SECONDS) — migrate state files onto the volume "
               f"via `railway ssh` now, before Layer 1 can run.")
         time.sleep(STARTUP_DELAY_SECONDS)
-    print(f"[Server] 🔁 Background scheduler loop started "
+    print(f"[Server] [*] Background scheduler loop started "
           f"(checking every {LOOP_CHECK_INTERVAL_SECONDS}s)...")
     while True:
         try:
             with _tick_lock:
                 scheduler.run_tick(force=False)
         except Exception as e:
-            print(f"[Server] ❌ Background tick failed: {e}")
+            print(f"[Server] [X] Background tick failed: {e}")
             traceback.print_exc()
         time.sleep(LOOP_CHECK_INTERVAL_SECONDS)
 

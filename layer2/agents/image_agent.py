@@ -68,7 +68,7 @@ def image_agent_node(state: GraphState) -> dict:
     (images) or simply omits that video (videos — no safe URL fallback,
     see download_video()'s Referer requirement in cj_api.py).
     """
-    print("\n[ImageAgent] 🖼️  Downloading product media (images unmodified)...")
+    print("\n[ImageAgent] [*]  Downloading product media (images unmodified)...")
     errors = list(state.get("errors", []))
     listings = state.get("priced_listings", [])
 
@@ -108,13 +108,13 @@ def image_agent_node(state: GraphState) -> dict:
             # simply dropped for this run, and logged below.
 
         if source_video_urls and not processed_video_urls:
-            print(f"[ImageAgent]     ⚠️  {len(source_video_urls)} video(s) found but none downloaded successfully")
+            print(f"[ImageAgent]     [!]  {len(source_video_urls)} video(s) found but none downloaded successfully")
 
         listing.processed_video_urls = processed_video_urls
         processed.append(listing)
 
     total_videos = sum(len(getattr(l, "processed_video_urls", [])) for l in processed)
-    print(f"[ImageAgent] ✅ Processed images for {len(processed)} listings "
+    print(f"[ImageAgent] [OK] Processed images for {len(processed)} listings "
           f"({total_videos} videos downloaded)")
     return {"image_ready_listings": processed, "errors": errors}
 
@@ -143,7 +143,7 @@ def _download_image_unmodified(url: str, product_id: str) -> Optional[Path]:
         return filename
 
     except Exception as e:
-        print(f"[ImageAgent]     ⚠️  Image download failed for {url[:60]}: {e}")
+        print(f"[ImageAgent]     [!]  Image download failed for {url[:60]}: {e}")
         return None
 
 
@@ -162,5 +162,5 @@ def _download_video_for_listing(url: str, product_id: str) -> Optional[Path]:
     if success:
         return filename
 
-    print(f"[ImageAgent]     ⚠️  Video download failed for {url[:60]}")
+    print(f"[ImageAgent]     [!]  Video download failed for {url[:60]}")
     return None

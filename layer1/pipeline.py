@@ -89,11 +89,11 @@ def reporter_node(state: GraphState) -> dict:
     for p in winners:
         by_collection[p.collection or "Unassigned"].append(p)
 
-    source_icon = {"trend": "📈", "seed": "⭐", "new_arrival": "🆕", "region_trend": "🌍"}
+    source_icon = {"trend": "[*]", "seed": "[*]", "new_arrival": "[*]", "region_trend": "[*]"}
 
     rank = 1
     for collection_name, products in by_collection.items():
-        print(f"\n📦 {collection_name}")
+        print(f"\n[*] {collection_name}")
         print("-" * 50)
         for p in products:
             icon = source_icon.get(p.source, "•")
@@ -113,11 +113,11 @@ def reporter_node(state: GraphState) -> dict:
     source_counts: dict = defaultdict(int)
     for p in winners:
         source_counts[p.source] += 1
-    print("\n📊 Product mix:")
+    print("\n[*] Product mix:")
     for src, count in sorted(source_counts.items()):
         label = {
-            "trend": "📈 Trending", "seed": "⭐ Evergreen",
-            "new_arrival": "🆕 New Arrivals", "region_trend": "🌍 World Trends",
+            "trend": "[*] Trending", "seed": "[*] Evergreen",
+            "new_arrival": "[*] New Arrivals", "region_trend": "[*] World Trends",
         }.get(src, src)
         print(f"   {label}: {count}")
 
@@ -127,16 +127,16 @@ def reporter_node(state: GraphState) -> dict:
         if p.region:
             region_counts[p.region_label or p.region] += 1
     if region_counts:
-        print("\n🌍 World Trends collection, by region:")
+        print("\n[*] World Trends collection, by region:")
         for region_label, count in sorted(region_counts.items(), key=lambda x: -x[1]):
             print(f"   {region_label}: {count}")
 
     if state.get("errors"):
-        print(f"\n⚠️  Non-fatal errors encountered: {len(state['errors'])}")
+        print(f"\n[!]  Non-fatal errors encountered: {len(state['errors'])}")
         for e in state["errors"]:
             print(f"   - {e}")
 
-    print(f"\n📄 Full results saved to: {output_path}")
+    print(f"\n[*] Full results saved to: {output_path}")
     print("="*60)
     print("  → Pass this file to Layer 2 (Listing Generator) to publish products")
     print("="*60 + "\n")
@@ -233,7 +233,7 @@ def run_layer1(
         "seen_pids_path":           seen_pids_path,
     }
 
-    print("\n🚀 Starting Layer 1 — Beauty & Skincare Market Intelligence Pipeline")
+    print("\n[*] Starting Layer 1 — Beauty & Skincare Market Intelligence Pipeline")
     print(f"   Niches: {initial_state['niches']}")
     print(f"   Max trend keywords: {max_trends}")
     print(f"   Max seed keywords: {max_seed_keywords if max_seed_keywords else 'unlimited (~250)'}")

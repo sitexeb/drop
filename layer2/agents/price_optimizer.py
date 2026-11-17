@@ -51,7 +51,7 @@ def price_optimizer_node(state: GraphState) -> dict:
     Calculates optimal retail price for each listing.
     Adds compare_at_price for perceived discount.
     """
-    print("\n[PriceOptimizer] 💰 Optimising prices...")
+    print("\n[PriceOptimizer] [*] Optimising prices...")
     errors = list(state.get("errors", []))
     listings = state.get("listings", [])
 
@@ -106,7 +106,7 @@ def price_optimizer_node(state: GraphState) -> dict:
             listing.variants = _price_variants(listing.variants, listing.supplier_price, fallback_retail)
             priced.append(listing)
 
-    print(f"[PriceOptimizer] ✅ Priced {len(priced)} listings")
+    print(f"[PriceOptimizer] [OK] Priced {len(priced)} listings")
     return {"priced_listings": priced, "errors": errors}
 
 

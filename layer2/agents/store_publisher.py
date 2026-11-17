@@ -274,12 +274,12 @@ def _stage_video_upload(local_path: Path) -> Optional[dict]:
         data = _graphql_request(_STAGED_UPLOADS_CREATE, variables)
         result = data["stagedUploadsCreate"]
         if result["userErrors"]:
-            print(f"[StorePublisher]     ⚠️  stagedUploadsCreate error: {result['userErrors']}")
+            print(f"[StorePublisher]     [!]  stagedUploadsCreate error: {result['userErrors']}")
             return None
         targets = result["stagedTargets"]
         return targets[0] if targets else None
     except Exception as e:
-        print(f"[StorePublisher]     ⚠️  stagedUploadsCreate failed: {e}")
+        print(f"[StorePublisher]     [!]  stagedUploadsCreate failed: {e}")
         return None
 
 
@@ -293,11 +293,11 @@ def _upload_to_staged_target(local_path: Path, staged_target: dict) -> bool:
             files = {"file": (local_path.name, f, mimetypes.guess_type(str(local_path))[0] or "video/mp4")}
             resp = requests.post(upload_url, data=form_fields, files=files, timeout=120)
         if resp.status_code not in (200, 201, 204):
-            print(f"[StorePublisher]     ⚠️  Staged upload returned {resp.status_code}: {resp.text[:200]}")
+            print(f"[StorePublisher]     [!]  Staged upload returned {resp.status_code}: {resp.text[:200]}")
             return False
         return True
     except requests.RequestException as e:
-        print(f"[StorePublisher]     ⚠️  Staged upload failed: {e}")
+        print(f"[StorePublisher]     [!]  Staged upload failed: {e}")
         return False
 
 
@@ -315,12 +315,12 @@ def _attach_media_to_product(product_gid: str, resource_url: str) -> Optional[st
         data = _graphql_request(_PRODUCT_CREATE_MEDIA, variables)
         result = data["productCreateMedia"]
         if result["mediaUserErrors"]:
-            print(f"[StorePublisher]     ⚠️  productCreateMedia error: {result['mediaUserErrors']}")
+            print(f"[StorePublisher]     [!]  productCreateMedia error: {result['mediaUserErrors']}")
             return None
         media_list = result["media"]
         return media_list[0]["id"] if media_list else None
     except Exception as e:
-        print(f"[StorePublisher]     ⚠️  productCreateMedia failed: {e}")
+        print(f"[StorePublisher]     [!]  productCreateMedia failed: {e}")
         return None
 
 
@@ -334,11 +334,11 @@ def _reorder_media_to_front(product_gid: str, media_gid: str) -> bool:
         data = _graphql_request(_PRODUCT_REORDER_MEDIA, variables)
         result = data["productReorderMedia"]
         if result["mediaUserErrors"]:
-            print(f"[StorePublisher]     ⚠️  productReorderMedia error: {result['mediaUserErrors']}")
+            print(f"[StorePublisher]     [!]  productReorderMedia error: {result['mediaUserErrors']}")
             return False
         return True
     except Exception as e:
-        print(f"[StorePublisher]     ⚠️  productReorderMedia failed: {e}")
+        print(f"[StorePublisher]     [!]  productReorderMedia failed: {e}")
         return False
 
 
@@ -359,7 +359,7 @@ def _attach_videos_to_product(product_id: str, local_video_paths: List[str]) -> 
     for video_path_str in local_video_paths:
         video_path = Path(video_path_str)
         if not video_path.exists() or not video_path.is_file():
-            print(f"[StorePublisher]     ⚠️  Video file not found, skipping: {video_path_str}")
+            print(f"[StorePublisher]     [!]  Video file not found, skipping: {video_path_str}")
             continue
 
         staged_target = _stage_video_upload(video_path)
@@ -372,7 +372,7 @@ def _attach_videos_to_product(product_id: str, local_video_paths: List[str]) -> 
         media_gid = _attach_media_to_product(product_gid, staged_target["resourceUrl"])
         if media_gid:
             attached += 1
-            print(f"[StorePublisher]     🎬 Attached video: {video_path.name}")
+            print(f"[StorePublisher]     [*] Attached video: {video_path.name}")
             if first_video_media_gid is None:
                 first_video_media_gid = media_gid
 
@@ -380,7 +380,7 @@ def _attach_videos_to_product(product_id: str, local_video_paths: List[str]) -> 
         if _reorder_media_to_front(product_gid, first_video_media_gid):
             print(f"[StorePublisher]     🥇 Video moved to first position")
         else:
-            print(f"[StorePublisher]     ⚠️  Video attached but reorder-to-front failed "
+            print(f"[StorePublisher]     [!]  Video attached but reorder-to-front failed "
                   f"(video is still visible, just not first)")
 
     return attached
@@ -406,17 +406,17 @@ def _cj_pid_exists(cj_pid: str) -> Optional[str]:
     age_days     = (datetime.now() - published_at).days
 
     if age_days > REGISTRY_TTL_DAYS:
-        print(f"[StorePublisher]   🔄 cj_pid {cj_pid} expired ({age_days}d old) — refreshing listing")
+        print(f"[StorePublisher]   [*] cj_pid {cj_pid} expired ({age_days}d old) — refreshing listing")
         return None
 
     existing_id = entry["shopify_product_id"]
 
     if not _shopify_product_exists(existing_id):
-        print(f"[StorePublisher]   🔄 Product {existing_id} was deleted from Shopify — republishing")
+        print(f"[StorePublisher]   [*] Product {existing_id} was deleted from Shopify — republishing")
         _remove_from_registry(cj_pid)
         return None
 
-    print(f"[StorePublisher]   ⚠️  Duplicate — published {age_days}d ago (Shopify id: {existing_id})")
+    print(f"[StorePublisher]   [!]  Duplicate — published {age_days}d ago (Shopify id: {existing_id})")
     return existing_id
 
 
@@ -444,9 +444,9 @@ def _get_collection_id(collection_name: str) -> Optional[str]:
                     _collection_cache[collection_name] = cid
                     return cid
         except Exception as e:
-            print(f"[StorePublisher]   ⚠️  Error searching {endpoint}: {e}")
+            print(f"[StorePublisher]   [!]  Error searching {endpoint}: {e}")
 
-    print(f"[StorePublisher]   ⚠️  Collection '{collection_name}' not found in Shopify")
+    print(f"[StorePublisher]   [!]  Collection '{collection_name}' not found in Shopify")
     return None
 
 
@@ -463,13 +463,13 @@ def _assign_to_collection(product_id: str, collection_name: str) -> None:
             timeout=15,
         )
         if resp.status_code in (200, 201):
-            print(f"[StorePublisher]   ✅ Assigned to collection: {collection_name}")
+            print(f"[StorePublisher]   [OK] Assigned to collection: {collection_name}")
         elif resp.status_code == 422:
             print(f"[StorePublisher]   ℹ️  Already in collection: {collection_name}")
         else:
-            print(f"[StorePublisher]   ⚠️  Collection assign failed: {resp.status_code}")
+            print(f"[StorePublisher]   [!]  Collection assign failed: {resp.status_code}")
     except Exception as e:
-        print(f"[StorePublisher]   ⚠️  Collection assign error: {e}")
+        print(f"[StorePublisher]   [!]  Collection assign error: {e}")
 
 
 # ── Field validation ───────────────────────────────────────────────────────────
@@ -618,7 +618,7 @@ def _get_option_naming_llm():
                 openai_api_key=os.getenv("OPENAI_API_KEY"),
             )
         except Exception as e:
-            print(f"[StorePublisher]     ⚠️  Could not init option-naming LLM: {e}")
+            print(f"[StorePublisher]     [!]  Could not init option-naming LLM: {e}")
             _option_naming_llm = False
     return _option_naming_llm
 
@@ -664,14 +664,14 @@ def _llm_classify_option_names(col1_values: List[str], col2_values: List[str]) -
         name2 = str(data.get("option2_name", "")).strip()
 
         if not name1 or not name2 or name1.lower() == name2.lower():
-            print(f"[StorePublisher]     ⚠️  LLM returned invalid/duplicate option names: {data}")
+            print(f"[StorePublisher]     [!]  LLM returned invalid/duplicate option names: {data}")
             return None
 
         print(f"[StorePublisher]     🤖 LLM classified columns: '{name1}' / '{name2}'")
         return name1, name2
 
     except Exception as e:
-        print(f"[StorePublisher]     ⚠️  Option-naming LLM call failed: {e}")
+        print(f"[StorePublisher]     [!]  Option-naming LLM call failed: {e}")
         return None
 
 
@@ -757,7 +757,7 @@ def _derive_option_columns(variants_raw: List[dict]) -> tuple:
     firsts, seconds = [], []
     for result, v in zip(split_results, variants_raw):
         if result is None:
-            print(f"[StorePublisher]     ⚠️  Variant '{v['option_value']}' didn't split cleanly "
+            print(f"[StorePublisher]     [!]  Variant '{v['option_value']}' didn't split cleanly "
                   f"— using fallback second value '{FALLBACK_SECOND_VALUE}'")
             firsts.append(v["option_value"].strip())
             seconds.append(FALLBACK_SECOND_VALUE)
@@ -850,7 +850,7 @@ def store_publisher_node(state: GraphState) -> dict:
     Attaches any downloaded videos after a successful product creation,
     and reorders media so the video leads the gallery.
     """
-    print("\n[StorePublisher] 🚀 Publishing to Shopify...")
+    print("\n[StorePublisher] [*] Publishing to Shopify...")
     errors  = list(state.get("errors", []))
     listings = state.get("image_ready_listings", [])
 
@@ -871,7 +871,7 @@ def store_publisher_node(state: GraphState) -> dict:
             skipped.append(listing.cj_pid)
             listing.shopify_product_id = existing_id
             listing.published = False
-            print(f"[StorePublisher]   ⏭️  Skipped: {listing.shopify_title[:45]}")
+            print(f"[StorePublisher]   [*]  Skipped: {listing.shopify_title[:45]}")
             continue
 
         try:
@@ -881,7 +881,7 @@ def store_publisher_node(state: GraphState) -> dict:
             listing.shopify_product_url = product_url
             listing.published = True
             published.append(listing)
-            print(f"[StorePublisher]   ✅ Live at: {product_url}")
+            print(f"[StorePublisher]   [OK] Live at: {product_url}")
 
             _register_product(listing.cj_pid, product_id, listing.shopify_title)
 
@@ -891,15 +891,15 @@ def store_publisher_node(state: GraphState) -> dict:
 
             video_paths = getattr(listing, "processed_video_urls", None) or []
             if video_paths:
-                print(f"[StorePublisher]   🎬 Attaching {len(video_paths)} video(s)...")
+                print(f"[StorePublisher]   [*] Attaching {len(video_paths)} video(s)...")
                 n_attached = _attach_videos_to_product(product_id, video_paths)
                 total_videos_attached += n_attached
                 if n_attached < len(video_paths):
-                    print(f"[StorePublisher]   ⚠️  Only {n_attached}/{len(video_paths)} video(s) attached")
+                    print(f"[StorePublisher]   [!]  Only {n_attached}/{len(video_paths)} video(s) attached")
 
         except Exception as e:
             error_msg = f"StorePublisher failed for '{listing.original_title}': {e}"
-            print(f"[StorePublisher]   ❌ {error_msg}")
+            print(f"[StorePublisher]   [X] {error_msg}")
             errors.append(error_msg)
             failed.append({
                 "title":  listing.original_title,
@@ -907,9 +907,9 @@ def store_publisher_node(state: GraphState) -> dict:
                 "error":  str(e),
             })
 
-    print(f"\n[StorePublisher] ✅ Published: {len(published)} | "
-          f"⏭️  Skipped: {len(skipped)} | ❌ Failed: {len(failed)} | "
-          f"🎬 Videos attached: {total_videos_attached}")
+    print(f"\n[StorePublisher] [OK] Published: {len(published)} | "
+          f"[*]  Skipped: {len(skipped)} | [X] Failed: {len(failed)} | "
+          f"[*] Videos attached: {total_videos_attached}")
     _print_summary(published)
 
     return {
@@ -940,7 +940,7 @@ def _post_product_with_safe_retry(payload: dict, attempts: int = 3):
             )
         except requests.exceptions.ConnectionError as e:
             last_err = e
-            print(f"[StorePublisher]   ⚠️  Connect failed (attempt {attempt}/{attempts}), retrying: {e}")
+            print(f"[StorePublisher]   [!]  Connect failed (attempt {attempt}/{attempts}), retrying: {e}")
     raise last_err
 
 
@@ -996,7 +996,7 @@ def _publish_product(listing: ShopifyListing) -> tuple[str, str]:
         if collection_tag not in seen_tags:
             clean_tags.append(collection_tag)
             seen_tags.add(collection_tag)
-            print(f"[StorePublisher]   🏷️  Added collection tag: {collection_tag}")
+            print(f"[StorePublisher]   [*]  Added collection tag: {collection_tag}")
 
     # Add sub_collection if available and not already present
     sub_collection = getattr(listing, "sub_collection", None) or getattr(listing, "subcategory", None)
@@ -1024,7 +1024,7 @@ def _publish_product(listing: ShopifyListing) -> tuple[str, str]:
             sub_tag = f"sub:{sub_collection}"
             clean_tags.append(sub_tag)
             seen_tags.add(sub_tag)
-            print(f"[StorePublisher]   🏷️  Added sub-collection tag: {sub_tag}")
+            print(f"[StorePublisher]   [*]  Added sub-collection tag: {sub_tag}")
 
     # Add category as tag if available and not already present
     if category:
@@ -1032,7 +1032,7 @@ def _publish_product(listing: ShopifyListing) -> tuple[str, str]:
         if category_tag not in seen_tags:
             clean_tags.append(category_tag)
             seen_tags.add(category_tag)
-            print(f"[StorePublisher]   🏷️  Added category tag: {category_tag}")
+            print(f"[StorePublisher]   [*]  Added category tag: {category_tag}")
 
     # Add trend keyword as tag if available
     trend_keyword = getattr(listing, "trend_keyword", None)
@@ -1041,14 +1041,14 @@ def _publish_product(listing: ShopifyListing) -> tuple[str, str]:
         if trend_tag not in seen_tags:
             clean_tags.append(trend_tag)
             seen_tags.add(trend_tag)
-            print(f"[StorePublisher]   🏷️  Added trend tag: {trend_tag}")
+            print(f"[StorePublisher]   [*]  Added trend tag: {trend_tag}")
 
     # Limit to 250 tags (Shopify's limit)
     clean_tags = clean_tags[:250]
 
     # Log final tags
     if clean_tags:
-        print(f"[StorePublisher]   🏷️  Final tags ({len(clean_tags)} total): {', '.join(clean_tags)}")
+        print(f"[StorePublisher]   [*]  Final tags ({len(clean_tags)} total): {', '.join(clean_tags)}")
     else:
         print(f"[StorePublisher]   ℹ️  No tags to apply")
 
@@ -1098,7 +1098,7 @@ def _publish_product(listing: ShopifyListing) -> tuple[str, str]:
             # than KeyError-ing and failing the whole product publish.
             variant_price = v.get("retail_price")
             if variant_price is None:
-                print(f"[StorePublisher]     ⚠️  Variant '{v.get('option_value', '?')}' "
+                print(f"[StorePublisher]     [!]  Variant '{v.get('option_value', '?')}' "
                       f"missing retail_price — using listing price ${listing.retail_price:.2f}")
                 variant_price = listing.retail_price
 
@@ -1196,7 +1196,7 @@ def _publish_product(listing: ShopifyListing) -> tuple[str, str]:
     # ── Debug: Log payload summary ──────────────────────────────────────────
     compare_at_display = f"${compare_at_price:.2f}" if compare_at_price is not None else "— (none)"
     print(f"[StorePublisher]     - Compare at: {compare_at_display}")
-    print(f"[StorePublisher]   📦 Creating product with:")
+    print(f"[StorePublisher]   [*] Creating product with:")
     print(f"[StorePublisher]     - Title: {listing.shopify_title[:60]}...")
     print(f"[StorePublisher]     - Price: ${listing.retail_price:.2f}")
     print(f"[StorePublisher]     - Variants: {len(variants_payload)}")
@@ -1209,7 +1209,7 @@ def _publish_product(listing: ShopifyListing) -> tuple[str, str]:
 
     if resp.status_code not in (200, 201):
         error_detail = resp.text[:500]
-        print(f"[StorePublisher]   ❌ Shopify API error {resp.status_code}: {error_detail}")
+        print(f"[StorePublisher]   [X] Shopify API error {resp.status_code}: {error_detail}")
         raise ValueError(f"Shopify API error {resp.status_code}: {error_detail}")
 
     data = resp.json()["product"]
@@ -1221,20 +1221,20 @@ def _publish_product(listing: ShopifyListing) -> tuple[str, str]:
     tags_from_response = data.get("tags", "")
     if tags_from_response:
         print(
-            f"[StorePublisher]   ✅ Product created with tags: {tags_from_response[:100]}{'...' if len(tags_from_response) > 100 else ''}")
+            f"[StorePublisher]   [OK] Product created with tags: {tags_from_response[:100]}{'...' if len(tags_from_response) > 100 else ''}")
     else:
-        print(f"[StorePublisher]   ⚠️  No tags returned in Shopify response!")
+        print(f"[StorePublisher]   [!]  No tags returned in Shopify response!")
 
     # ── Link variant images ─────────────────────────────────────────────────
     if has_real_variants:
         try:
             _link_variant_images(data, num_general, variant_image_plan)
         except Exception as e:
-            print(f"[StorePublisher]     ⚠️  Variant-image linking failed (product still live): {e}")
+            print(f"[StorePublisher]     [!]  Variant-image linking failed (product still live): {e}")
 
     # ── Log success ─────────────────────────────────────────────────────────
-    print(f"[StorePublisher]   ✅ Product live at: {product_url}")
-    print(f"[StorePublisher]   📝 Shopify ID: {product_id}")
+    print(f"[StorePublisher]   [OK] Product live at: {product_url}")
+    print(f"[StorePublisher]   [*] Shopify ID: {product_id}")
 
     return product_id, product_url
 
@@ -1262,7 +1262,7 @@ def _link_variant_images(data: dict, num_general_images: int, variant_image_plan
         img_index = ref if kind == "existing" else num_general_images + ref
 
         if img_index >= len(response_images):
-            print(f"[StorePublisher]     ⚠️  Image index out of range for variant {i}, skipping")
+            print(f"[StorePublisher]     [!]  Image index out of range for variant {i}, skipping")
             continue
 
         image_id   = response_images[img_index]["id"]
@@ -1284,10 +1284,10 @@ def _link_variant_images(data: dict, num_general_images: int, variant_image_plan
                 label = " ".join(o for o in opts if o)
                 print(f"[StorePublisher]     🎨 Linked {tag} image → {label}")
             else:
-                print(f"[StorePublisher]     ⚠️  Variant image link failed ({resp.status_code}) "
+                print(f"[StorePublisher]     [!]  Variant image link failed ({resp.status_code}) "
                       f"for variant {i}")
         except requests.RequestException as e:
-            print(f"[StorePublisher]     ⚠️  Variant image link error: {e}")
+            print(f"[StorePublisher]     [!]  Variant image link error: {e}")
 
 
 def _prepare_images(listing: ShopifyListing) -> List[dict]:

@@ -35,7 +35,7 @@ _llm = ChatOpenAI(
 COLLECTIONS = {
 
     # ==============================================
-    # 1. FASHION 👗
+    # 1. FASHION [*]
     # ==============================================
     "Fashion": {
         "description": (
@@ -87,7 +87,7 @@ COLLECTIONS = {
     },
 
     # ==============================================
-    # 2. SHOES 👠
+    # 2. SHOES [*]
     # ==============================================
     "Shoes": {
         "description": (
@@ -105,7 +105,7 @@ COLLECTIONS = {
     },
 
     # ==============================================
-    # 3. JEWELRY 💎
+    # 3. JEWELRY [*]
     # ==============================================
     "Jewelry": {
         "description": (
@@ -144,7 +144,7 @@ COLLECTIONS = {
     },
 
     # ==============================================
-    # 4. ACCESSORIES 👜
+    # 4. ACCESSORIES [*]
     # ==============================================
     "Accessories": {
         "description": (
@@ -191,7 +191,7 @@ COLLECTIONS = {
     },
 
     # ==============================================
-    # 5. WELLNESS 🌿
+    # 5. WELLNESS [*]
     # ==============================================
     "Wellness": {
         "description": (
@@ -530,7 +530,7 @@ def trend_scout_node(state: GraphState) -> dict:
     Apify actors only actually run about once a week, regardless of how
     often this pipeline itself runs — protects your Apify credit.
     """
-    print("\n[TrendScout] 🔍 Fetching Google Trends + social trends data...")
+    print("\n[TrendScout] [*] Fetching Google Trends + social trends data...")
     errors = list(state.get("errors", []))
 
     # ── Always include seeds (capped by max_seed_keywords if provided) ─────
@@ -546,7 +546,7 @@ def trend_scout_node(state: GraphState) -> dict:
         )
     except Exception as e:
         error_msg = f"TrendScout: Google Trends error: {str(e)}"
-        print(f"[TrendScout] ❌ {error_msg}")
+        print(f"[TrendScout] [X] {error_msg}")
         errors.append(error_msg)
         raw_trends = []
 
@@ -558,7 +558,7 @@ def trend_scout_node(state: GraphState) -> dict:
         print(f"[TrendScout] Found {len(social_trends)} TikTok/Instagram trends")
     except Exception as e:
         error_msg = f"TrendScout: Social trends error: {str(e)}"
-        print(f"[TrendScout] ❌ {error_msg}")
+        print(f"[TrendScout] [X] {error_msg}")
         errors.append(error_msg)
         social_trends = []
 
@@ -572,8 +572,8 @@ def trend_scout_node(state: GraphState) -> dict:
             combined_trends, max_count=state["max_trends"], errors=errors, label="global",
         )
 
-    print(f"[TrendScout] ✅ Trend keywords: {filtered_keywords}")
-    print(f"[TrendScout] ✅ Seed keywords: {len(seed_keywords)} always-on keywords included")
+    print(f"[TrendScout] [OK] Trend keywords: {filtered_keywords}")
+    print(f"[TrendScout] [OK] Seed keywords: {len(seed_keywords)} always-on keywords included")
 
     # ── Per-region trends (US / Europe / Korea / Japan / Latin America) ────
     region_trend_keywords = _fetch_region_trends(state, seed_keywords, errors)
@@ -682,7 +682,7 @@ def _aggregate_trend_categories(
 
         if attempt < max_attempts:
             wait_s = 2 ** attempt  # 2s, 4s
-            print(f"[TrendScout] [{label}] ⚠️ LLM attempt {attempt}/{max_attempts} failed "
+            print(f"[TrendScout] [{label}] [!] LLM attempt {attempt}/{max_attempts} failed "
                   f"({last_error}). Retrying in {wait_s}s...")
             time.sleep(wait_s)
 
@@ -692,7 +692,7 @@ def _aggregate_trend_categories(
             f"({last_error}). Likely rate limit / quota on the OpenAI key — falling back to "
             f"non-LLM keyword selection."
         )
-        print(f"[TrendScout] ❌ {error_msg}")
+        print(f"[TrendScout] [X] {error_msg}")
         errors.append(error_msg)
         return _fallback_aggregate_trends(combined_trends, max_count, label)
 
@@ -722,7 +722,7 @@ def _aggregate_trend_categories(
                 safe_category_scores[cat] = score
 
         if blocked_categories:
-            print(f"[TrendScout] [{label}] 🚫 LLM proposed off-niche/beauty/mens categories "
+            print(f"[TrendScout] [{label}] [X] LLM proposed off-niche/beauty/mens categories "
                   f"(dropped before any CJ search happened): {blocked_categories}")
 
         sorted_categories = sorted(
@@ -732,12 +732,12 @@ def _aggregate_trend_categories(
         filtered_keywords = [cat for cat, _ in sorted_categories]
         trend_scores = sorted_categories
 
-        print(f"[TrendScout] [{label}] ✅ Keywords: {filtered_keywords}")
+        print(f"[TrendScout] [{label}] [OK] Keywords: {filtered_keywords}")
         return filtered_keywords, trend_scores
 
     except Exception as e:
         error_msg = f"TrendScout: LLM JSON parse error [{label}]: {str(e)}. Raw content: {content[:200]!r}"
-        print(f"[TrendScout] ❌ {error_msg}")
+        print(f"[TrendScout] [X] {error_msg}")
         errors.append(error_msg)
         return _fallback_aggregate_trends(combined_trends, max_count, label)
 
@@ -797,10 +797,10 @@ def _fetch_region_trends(
     for region_key in regions:
         cfg = REGIONS.get(region_key)
         if not cfg:
-            print(f"[TrendScout] ⚠️ Unknown region '{region_key}' — skipping (check REGIONS in nodes.py)")
+            print(f"[TrendScout] [!] Unknown region '{region_key}' — skipping (check REGIONS in nodes.py)")
             continue
 
-        print(f"\n[TrendScout] 🌍 Fetching trends for region: {cfg['label']} ({region_key})...")
+        print(f"\n[TrendScout] [*] Fetching trends for region: {cfg['label']} ({region_key})...")
 
         # Google Trends: merge across all geo codes for this region (e.g.
         # Europe = GB + DE + FR combined), keeping the max score per keyword.
@@ -817,7 +817,7 @@ def _fetch_region_trends(
                     region_google[kw] = max(region_google.get(kw, 0), score)
             except Exception as e:
                 error_msg = f"TrendScout: Google Trends error [{region_key}/{geo_code}]: {str(e)}"
-                print(f"[TrendScout] ❌ {error_msg}")
+                print(f"[TrendScout] [X] {error_msg}")
                 errors.append(error_msg)
 
         # TikTok/Instagram: one country proxy per region (Apify actors take
@@ -830,7 +830,7 @@ def _fetch_region_trends(
             )
         except Exception as e:
             error_msg = f"TrendScout: Social trends error [{region_key}]: {str(e)}"
-            print(f"[TrendScout] ❌ {error_msg}")
+            print(f"[TrendScout] [X] {error_msg}")
             errors.append(error_msg)
             region_social = []
 
@@ -863,7 +863,7 @@ def supplier_finder_node(state: GraphState) -> dict:
     (_is_mens_product), and any pid already seen in a previous pipeline run
     (seen_pids.json) is dropped so every daily run surfaces fresh products.
     """
-    print("\n[SupplierFinder] 🛒 Searching CJ Dropshipping (dual-sort strategy)...")
+    print("\n[SupplierFinder] [*] Searching CJ Dropshipping (dual-sort strategy)...")
 
     errors        = list(state.get("errors", []))
     trend_kws     = state.get("trend_keywords", [])
@@ -932,7 +932,7 @@ def supplier_finder_node(state: GraphState) -> dict:
     region_trend_keywords = state.get("region_trend_keywords", {}) or {}
     region_job_count = sum(len(v) for v in region_trend_keywords.values())
     if region_job_count:
-        print(f"[SupplierFinder] 🌍 {region_job_count} region-trend keywords across "
+        print(f"[SupplierFinder] [*] {region_job_count} region-trend keywords across "
               f"{len(region_trend_keywords)} regions")
 
     for region_key, kw_scores in region_trend_keywords.items():
@@ -956,9 +956,9 @@ def supplier_finder_node(state: GraphState) -> dict:
     # ── Persist newly seen PIDs ────────────────────────────────────────────
     _save_seen_pids(seen_pids_path, run_seen_pids)
 
-    print(f"[SupplierFinder] ✅ Total unique products collected: {len(all_raw_products)}")
+    print(f"[SupplierFinder] [OK] Total unique products collected: {len(all_raw_products)}")
     if blocked_count:
-        print(f"[SupplierFinder] 🚫 Total off-niche/mens products blocked: {blocked_count}")
+        print(f"[SupplierFinder] [X] Total off-niche/mens products blocked: {blocked_count}")
     return {"raw_products": all_raw_products, "errors": errors}
 
 
@@ -1003,17 +1003,17 @@ def _fetch_and_collect(
                 continue
 
             if _is_off_niche(parsed["title"]):
-                print(f"[SupplierFinder]     🚫 Blocked off-niche: {parsed['title'][:55]}")
+                print(f"[SupplierFinder]     [X] Blocked off-niche: {parsed['title'][:55]}")
                 blocked_count += 1
                 continue
 
             if _is_mens_product(parsed["title"], parsed.get("category", "")):
-                print(f"[SupplierFinder]     🚫 Blocked mens product: {parsed['title'][:55]}")
+                print(f"[SupplierFinder]     [X] Blocked mens product: {parsed['title'][:55]}")
                 blocked_count += 1
                 continue
 
             if _is_beauty_consumable(parsed["title"], parsed.get("category", "")):
-                print(f"[SupplierFinder]     🚫 Blocked beauty consumable: {parsed['title'][:55]}")
+                print(f"[SupplierFinder]     [X] Blocked beauty consumable: {parsed['title'][:55]}")
                 blocked_count += 1
                 continue
 
@@ -1035,7 +1035,7 @@ def _fetch_and_collect(
 
     except Exception as e:
         error_msg = f"SupplierFinder error for {label}: {str(e)}"
-        print(f"[SupplierFinder] ❌ {error_msg}")
+        print(f"[SupplierFinder] [X] {error_msg}")
         errors.append(error_msg)
 
     return blocked_count
@@ -1102,7 +1102,7 @@ MIN_WINNING_SCORE = 60.0
 
 
 def scorer_node(state: GraphState) -> dict:
-    print("\n[Scorer] 📊 Scoring and ranking products...")
+    print("\n[Scorer] [*] Scoring and ranking products...")
     errors = list(state.get("errors", []))
     raw_products = state.get("raw_products", [])
 
@@ -1142,14 +1142,14 @@ def scorer_node(state: GraphState) -> dict:
     all_winning_products = []
     total_batches = (len(all_candidates) + batch_size - 1) // batch_size
 
-    print(f"[Scorer] 📦 Processing {len(all_candidates)} candidates in {total_batches} batches of {batch_size}...")
+    print(f"[Scorer] [*] Processing {len(all_candidates)} candidates in {total_batches} batches of {batch_size}...")
 
     for batch_num in range(total_batches):
         start_idx = batch_num * batch_size
         end_idx = min(start_idx + batch_size, len(all_candidates))
         batch_candidates = all_candidates[start_idx:end_idx]
 
-        print(f"\n[Scorer] 🚀 Processing batch {batch_num + 1}/{total_batches} ({len(batch_candidates)} products)...")
+        print(f"\n[Scorer] [*] Processing batch {batch_num + 1}/{total_batches} ({len(batch_candidates)} products)...")
 
         product_list_text = "\n".join([
             f"{i + 1}. {p.title} | ${p.supplier_price} cost | {p.margin_pct}% margin | "
@@ -1239,7 +1239,7 @@ def scorer_node(state: GraphState) -> dict:
                 # unassigned rather than creating a phantom collection.
                 if collection not in COLLECTION_NAMES:
                     if collection:
-                        print(f"[Scorer]   ⚠️  LLM returned unknown collection '{collection}' — clearing it")
+                        print(f"[Scorer]   [!]  LLM returned unknown collection '{collection}' — clearing it")
                     collection = ""
                     sub_collection = ""
 
@@ -1248,7 +1248,7 @@ def scorer_node(state: GraphState) -> dict:
                 valid_subs = SUB_COLLECTIONS.get(collection, [])
                 if sub_collection not in valid_subs:
                     if sub_collection:
-                        print(f"[Scorer]   ⚠️  LLM returned '{sub_collection}' which isn't a valid "
+                        print(f"[Scorer]   [!]  LLM returned '{sub_collection}' which isn't a valid "
                               f"sub-collection of '{collection}' — clearing it")
                     sub_collection = ""
 
@@ -1263,7 +1263,7 @@ def scorer_node(state: GraphState) -> dict:
                     # through because the pre-search blocklist is
                     # deliberately conservative.
                     if _is_mens_product(product.title, product.category):
-                        print(f"[Scorer]   🚫 Post-LLM block (mens product): {product.title[:55]}")
+                        print(f"[Scorer]   [X] Post-LLM block (mens product): {product.title[:55]}")
                         continue
 
                     # ── Post-LLM safety net (beauty consumables) ────────────
@@ -1273,7 +1273,7 @@ def scorer_node(state: GraphState) -> dict:
                     # anything (creams, oils, serums, etc.) that slips
                     # through an LLM batch despite the instruction.
                     if _is_beauty_consumable(product.title, product.category):
-                        print(f"[Scorer]   🚫 Post-LLM block (beauty consumable): {product.title[:55]}")
+                        print(f"[Scorer]   [X] Post-LLM block (beauty consumable): {product.title[:55]}")
                         continue
 
                     product.collection = collection
@@ -1282,12 +1282,12 @@ def scorer_node(state: GraphState) -> dict:
                         product.shopify_tags.append(f"Sub: {sub_collection}")
                     batch_winners.append(product)
 
-            print(f"[Scorer] ✅ Batch {batch_num + 1} selected {len(batch_winners)} winning products")
+            print(f"[Scorer] [OK] Batch {batch_num + 1} selected {len(batch_winners)} winning products")
             all_winning_products.extend(batch_winners)
 
         except Exception as e:
             error_msg = f"Scorer LLM filter error in batch {batch_num + 1}: {e}. Using top scorers from this batch (above quality bar)."
-            print(f"[Scorer] ⚠️  {error_msg}")
+            print(f"[Scorer] [!]  {error_msg}")
             errors.append(error_msg)
             # ── Fallback also respects the minimum score floor ─────────────
             # Previously this blindly kept batch_candidates[:3] regardless of
@@ -1302,7 +1302,7 @@ def scorer_node(state: GraphState) -> dict:
             all_winning_products.extend(fallback)
 
     # ── Final processing ──────────────────────────────────────────────────
-    print(f"\n[Scorer] ✅ LLM selected {len(all_winning_products)} winning products total from {total_batches} batches")
+    print(f"\n[Scorer] [OK] LLM selected {len(all_winning_products)} winning products total from {total_batches} batches")
     _print_source_breakdown(all_winning_products)
 
     # ── Enforce minimum quality bar (code-level, not LLM-dependent) ────────
@@ -1314,12 +1314,12 @@ def scorer_node(state: GraphState) -> dict:
     all_winning_products = [p for p in all_winning_products if p.score >= MIN_WINNING_SCORE]
     dropped = before_count - len(all_winning_products)
     if dropped:
-        print(f"[Scorer] 🚫 Dropped {dropped} winning product(s) below "
+        print(f"[Scorer] [X] Dropped {dropped} winning product(s) below "
               f"MIN_WINNING_SCORE={MIN_WINNING_SCORE}")
 
     all_winning_products.sort(key=lambda p: p.score, reverse=True)
 
-    print(f"\n[Scorer] 📚 Final collection breakdown:")
+    print(f"\n[Scorer] [*] Final collection breakdown:")
     _print_collection_breakdown(all_winning_products)
 
     _print_subcollection_breakdown(all_winning_products)
@@ -1351,7 +1351,7 @@ def _print_collection_breakdown(products: List) -> None:
     for p in products:
         counts[p.collection or "Unassigned"] += 1
     for name in COLLECTION_NAMES:
-        marker = "⚠️  ZERO WINNERS" if counts.get(name, 0) == 0 else ""
+        marker = "[!]  ZERO WINNERS" if counts.get(name, 0) == 0 else ""
         print(f"[Scorer]     {name}: {counts.get(name, 0)} {marker}")
     if counts.get("Unassigned"):
         print(f"[Scorer]     Unassigned: {counts['Unassigned']}")
@@ -1369,7 +1369,7 @@ def _print_subcollection_breakdown(products: List) -> None:
         print(f"[Scorer]     {collection_name}:")
         for sub in subs:
             n = counts.get(collection_name, {}).get(sub, 0)
-            marker = "⚠️  ZERO" if n == 0 else ""
+            marker = "[!]  ZERO" if n == 0 else ""
             print(f"[Scorer]       - {sub}: {n} {marker}")
         unassigned = counts.get(collection_name, {}).get("Unassigned", 0)
         if unassigned:

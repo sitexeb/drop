@@ -29,7 +29,7 @@ def _load_state() -> dict:
             with open(STATE_PATH) as f:
                 return json.load(f)
         except json.JSONDecodeError:
-            print(f"[Scheduler] ⚠️  {STATE_PATH} is corrupt/unreadable — treating as empty state.")
+            print(f"[Scheduler] [!]  {STATE_PATH} is corrupt/unreadable — treating as empty state.")
     return {}
 
 
@@ -46,7 +46,7 @@ def _load_winning_products() -> list:
         with open(WINNING_PRODUCTS_PATH) as f:
             return json.load(f)
     except json.JSONDecodeError:
-        print(f"[Scheduler] ⚠️  {WINNING_PRODUCTS_PATH} is corrupt/unreadable — treating as empty batch.")
+        print(f"[Scheduler] [!]  {WINNING_PRODUCTS_PATH} is corrupt/unreadable — treating as empty batch.")
         return []
 
 
@@ -64,13 +64,13 @@ def _adopt_or_reset_batch(products: list) -> dict:
 def _run_layer1_and_reset_state() -> dict:
     """Triggers a brand-new Layer 1 run with progress indication."""
     print("\n" + "=" * 70)
-    print("🏭 LAYER 1: Market Intelligence Pipeline")
+    print("[*] LAYER 1: Market Intelligence Pipeline")
     print("=" * 70)
-    print(f"📊 Current batch exhausted ({_load_state().get('total_products', 0)} products consumed)")
-    print("🔄 Fetching fresh batch of winning products...\n")
+    print(f"[*] Current batch exhausted ({_load_state().get('total_products', 0)} products consumed)")
+    print("[*] Fetching fresh batch of winning products...\n")
 
     # Run Layer 1 with progress
-    with tqdm(total=1, desc="🔍 Running Layer 1 Pipeline", unit="run") as pbar:
+    with tqdm(total=1, desc="[*] Running Layer 1 Pipeline", unit="run") as pbar:
         run_layer1()
         pbar.update(1)
 
@@ -78,8 +78,8 @@ def _run_layer1_and_reset_state() -> dict:
     state = _adopt_or_reset_batch(products)
     _save_state(state)
 
-    print(f"\n✅ Layer 1 complete!")
-    print(f"   📦 Found: {len(products)} winning products")
+    print(f"\n[OK] Layer 1 complete!")
+    print(f"   [*] Found: {len(products)} winning products")
     print(f"   📁 Saved to: {WINNING_PRODUCTS_PATH}")
     print("=" * 70 + "\n")
 
@@ -112,7 +112,7 @@ def print_status() -> None:
     state = _load_state()
 
     print("\n" + "=" * 60)
-    print("📋 SCHEDULER STATUS")
+    print("[*] SCHEDULER STATUS")
     print("=" * 60)
     print(f"  Products per tick:     {batch_size}")
     print(f"  Frequency (hours):     {frequency_hours}")
@@ -126,7 +126,7 @@ def print_status() -> None:
     idx = state.get("next_index", 0)
     remaining = max(total - idx, 0)
 
-    print("\n  📦 Batch Status:")
+    print("\n  [*] Batch Status:")
     print(f"    Created at:          {state.get('batch_created_at')}")
     print(f"    Total products:      {total}")
     print(f"    Already published:   {idx}")
@@ -174,10 +174,10 @@ def run_tick(force: bool = False) -> None:
     state = _load_state()
 
     if not state:
-        print("🔄 No scheduler state found — initializing with existing winning products...")
+        print("[*] No scheduler state found — initializing with existing winning products...")
         state = _adopt_or_reset_batch(_load_winning_products())
         _save_state(state)
-        print(f"   📦 Found {state['total_products']} products in current batch")
+        print(f"   [*] Found {state['total_products']} products in current batch")
 
     # ── Check if due ────────────────────────────────────────────────────────
     if not force and not _is_due(state, frequency_hours, empty_retry_hours):
@@ -196,7 +196,7 @@ def run_tick(force: bool = False) -> None:
     idx = state.get("next_index", 0)
     remaining = max(total - idx, 0)
 
-    print(f"\n📊 Batch status before tick:")
+    print(f"\n[*] Batch status before tick:")
     print(f"   Total products:    {total}")
     print(f"   Already published: {idx}")
     print(f"   Remaining:         {remaining}")
@@ -209,7 +209,7 @@ def run_tick(force: bool = False) -> None:
     products = _load_winning_products()
 
     if not products:
-        print("\n⚠️  Layer 1 produced 0 winning products — nothing to publish.")
+        print("\n[!]  Layer 1 produced 0 winning products — nothing to publish.")
         print(f"   Will retry in ~{empty_retry_hours}h instead of full {frequency_hours}h cycle.")
         state["last_run_at"] = datetime.now().isoformat()
         state["last_result"] = "empty"
@@ -228,7 +228,7 @@ def run_tick(force: bool = False) -> None:
     # ── Display batch info ────────────────────────────────────────────────
     batch_start = next_index + 1
     batch_end = next_index + len(batch)
-    print(f"\n📦 Publishing batch #{batch_start}-{batch_end} of {len(products)} total products")
+    print(f"\n[*] Publishing batch #{batch_start}-{batch_end} of {len(products)} total products")
     print(f"   Batch size:        {len(batch)} products")
     print(f"   Remaining after:   {len(products) - batch_end} products")
     print("-" * 60)
@@ -241,11 +241,11 @@ def run_tick(force: bool = False) -> None:
     failed = len(l2_state.get("failed_listings", []))
 
     print("\n" + "=" * 60)
-    print("📊 TICK COMPLETE")
+    print("[*] TICK COMPLETE")
     print("=" * 60)
-    print(f"  ✅ Published:       {published} products")
-    print(f"  ❌ Failed:          {failed} products")
-    print(f"  📦 Batch progress:  {batch_end}/{len(products)}")
+    print(f"  [OK] Published:       {published} products")
+    print(f"  [X] Failed:          {failed} products")
+    print(f"  [*] Batch progress:  {batch_end}/{len(products)}")
 
     # Progress bar
     pct = (batch_end / len(products) * 100) if len(products) > 0 else 0
@@ -262,11 +262,11 @@ def run_tick(force: bool = False) -> None:
 
     remaining_after = len(products) - state["next_index"]
     if remaining_after > 0:
-        print(f"\n📊 {remaining_after} product(s) remaining in current batch.")
+        print(f"\n[*] {remaining_after} product(s) remaining in current batch.")
         print(
             f"   Next tick will publish positions {state['next_index'] + 1}-{state['next_index'] + min(batch_size, remaining_after)}")
     else:
-        print(f"\n📊 Batch fully consumed! Next tick will trigger Layer 1 for a fresh batch.")
+        print(f"\n[*] Batch fully consumed! Next tick will trigger Layer 1 for a fresh batch.")
 
 
 # ── Entry point with enhanced loop logging ─────────────────────────────────
@@ -304,7 +304,7 @@ def main():
 
     if args.loop:
         print("\n" + "=" * 70)
-        print("🔄 SCHEDULER STARTING IN LOOP MODE")
+        print("[*] SCHEDULER STARTING IN LOOP MODE")
         print("=" * 70)
         print(f"  Check interval:     {LOOP_CHECK_INTERVAL_SECONDS}s (every 10 minutes)")
         print(f"  Publish frequency:  {get_layer_config('layer2').get('publish_frequency_hours', 72)} hours")
@@ -315,13 +315,13 @@ def main():
         while True:
             tick_count += 1
             print(f"\n{'=' * 70}")
-            print(f"🔄 SCHEDULER TICK #{tick_count} — {datetime.now().isoformat()}")
+            print(f"[*] SCHEDULER TICK #{tick_count} — {datetime.now().isoformat()}")
             print(f"{'=' * 70}")
 
             try:
                 run_tick(force=args.force)
             except Exception as e:
-                print(f"\n❌ Tick failed with error: {e}")
+                print(f"\n[X] Tick failed with error: {e}")
                 import traceback
                 traceback.print_exc()
 

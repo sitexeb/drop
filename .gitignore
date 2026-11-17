@@ -39,6 +39,10 @@ Thumbs.db
 .vscode/
 *.swp
 
+# ── Keys and dependency dirs ──────────────────────────────────────────────────
+*.key
+node_modules/
+
 keyword_scores_cache.json
 *.cache.json
 seen_pids.json

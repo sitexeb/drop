@@ -122,7 +122,7 @@ def find_working_apify_token():
             )
 
             if response.status_code == 200:
-                print(f"✅ Using Apify token: {var_name}")
+                print(f"[OK] Using Apify token: {var_name}")
                 return token
         except:
             continue
@@ -130,10 +130,10 @@ def find_working_apify_token():
     # Fallback to default
     default_token = os.getenv("APIFY_API_TOKEN")
     if default_token:
-        print("⚠️ No valid token found, using default")
+        print("[!] No valid token found, using default")
         return default_token
 
-    print("❌ No Apify tokens found!")
+    print("[X] No Apify tokens found!")
     return None
 
 
@@ -706,7 +706,7 @@ def _is_product_keyword(kw: str) -> bool:
 
 def _run_actor_sync(actor_id: str, run_input: dict, timeout: int = 120) -> List[dict]:
     if not APIFY_API_TOKEN:
-        print(f"[Apify] ⚠️ APIFY_API_TOKEN not set — skipping {actor_id}.")
+        print(f"[Apify] [!] APIFY_API_TOKEN not set — skipping {actor_id}.")
         return []
 
     url_actor_id = actor_id.replace("/", "~")
@@ -723,16 +723,16 @@ def _run_actor_sync(actor_id: str, run_input: dict, timeout: int = 120) -> List[
                 err_body = resp.json()
             except ValueError:
                 err_body = resp.text[:500]
-            print(f"[Apify] ❌ {resp.status_code} from {actor_id}. "
+            print(f"[Apify] [X] {resp.status_code} from {actor_id}. "
                   f"Input sent: {run_input}. Error body: {err_body}")
             return []
         items = resp.json()
         if not isinstance(items, list):
-            print(f"[Apify] ⚠️ Unexpected response shape from {actor_id}: {type(items)}")
+            print(f"[Apify] [!] Unexpected response shape from {actor_id}: {type(items)}")
             return []
         return items
     except requests.RequestException as e:
-        print(f"[Apify] ❌ Run failed for {actor_id}: {e}")
+        print(f"[Apify] [X] Run failed for {actor_id}: {e}")
         return []
 
 
@@ -743,7 +743,7 @@ def _fetch_google_trends(keywords: List[str], geo: str, timeframe: str) -> Dict[
     Related/rising search queries for a list of seed keywords, via an Apify
     Google Trends actor. Replaces the old pytrends-based _fetch_from_google.
 
-    ⚠️ UNVERIFIED SCHEMA (see module docstring). The input payload below
+    [!] UNVERIFIED SCHEMA (see module docstring). The input payload below
     uses the one concretely-documented schema found for this family of
     actors (searchTerms + timeRange, matching the open-source
     emastra/actor-google-trends-scraper this ecosystem is largely forked
@@ -886,7 +886,7 @@ def _parse_google_trends_items(items: List[dict]) -> Dict[str, int]:
             continue
 
         if not matched and not unrecognized_logged:
-            print(f"[GoogleTrends] ⚠️ Unrecognized item shape from {GOOGLE_TRENDS_ACTOR}, "
+            print(f"[GoogleTrends] [!] Unrecognized item shape from {GOOGLE_TRENDS_ACTOR}, "
                   f"first 300 chars: {str(item)[:300]}")
             unrecognized_logged = True
 
@@ -948,7 +948,7 @@ def get_trending_keywords(
     if not force_refresh:
         cached = _load_gtrends_cache(geo, cache_key_niches, timeframe)
         if cached is not None:
-            print(f"[GoogleTrends] ✅ Using cached trends for geo={geo} "
+            print(f"[GoogleTrends] [OK] Using cached trends for geo={geo} "
                   f"(< {GOOGLE_TRENDS_MAX_AGE_DAYS}d old, {len(cached)} keywords)")
             sorted_cached = sorted(cached.items(), key=lambda x: x[1], reverse=True)
             return sorted_cached[:max_keywords]
@@ -957,15 +957,15 @@ def get_trending_keywords(
     results: dict = {}
 
     if seeds:
-        print(f"[GoogleTrends] 🔄 Calling {GOOGLE_TRENDS_ACTOR} for geo={geo}, seeds={seeds}...")
+        print(f"[GoogleTrends] [*] Calling {GOOGLE_TRENDS_ACTOR} for geo={geo}, seeds={seeds}...")
         results = _fetch_google_trends(seeds, geo, timeframe)
 
     if not results:
-        print("[GoogleTrends] ✅ Actor returned nothing — using dynamic fallback scoring.")
+        print("[GoogleTrends] [OK] Actor returned nothing — using dynamic fallback scoring.")
         results = _get_dynamic_fallback_keywords()
 
     if not results:
-        print("[GoogleTrends] ⚠️ Fallback also failed, using intelligent random scoring.")
+        print("[GoogleTrends] [!] Fallback also failed, using intelligent random scoring.")
         results = _get_intelligent_random_scores()
 
     results = {k: v for k, v in results.items() if _is_safe_keyword(k)}
@@ -1298,10 +1298,10 @@ def get_social_trending_keywords(
         if cached is not None:
             # Filter cached results to only safe categories
             filtered_cache = _filter_safe_trends(cached)
-            print(f"[SocialTrends] ✅ Using cached social trends for {country} (< {MAX_CACHE_AGE_DAYS}d old, {len(filtered_cache)} safe keywords)")
+            print(f"[SocialTrends] [OK] Using cached social trends for {country} (< {MAX_CACHE_AGE_DAYS}d old, {len(filtered_cache)} safe keywords)")
             return sorted(filtered_cache.items(), key=lambda x: x[1], reverse=True)[:max_keywords]
 
-    print(f"[SocialTrends] 🔄 Cache stale or missing for {country} — calling Apify actors (this spends Apify credit)...")
+    print(f"[SocialTrends] [*] Cache stale or missing for {country} — calling Apify actors (this spends Apify credit)...")
 
     tiktok_scores = _fetch_tiktok_trends(max_keywords, country)
     print(f"[SocialTrends]   TikTok: {len(tiktok_scores)} safe hashtags")
@@ -1320,8 +1320,8 @@ def get_social_trending_keywords(
 
     if merged:
         _save_cache(merged, country)
-        print(f"[SocialTrends] ✅ Saved {len(merged)} safe social trends to cache for {country}")
+        print(f"[SocialTrends] [OK] Saved {len(merged)} safe social trends to cache for {country}")
     else:
-        print("[SocialTrends] ⚠️ No safe results from either platform — cache left untouched.")
+        print("[SocialTrends] [!] No safe results from either platform — cache left untouched.")
 
     return sorted(merged.items(), key=lambda x: x[1], reverse=True)[:max_keywords]

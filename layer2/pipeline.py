@@ -54,7 +54,7 @@ def duplicate_filter_node(state: GraphState) -> dict:
     This prevents wasting LLM calls, image processing, and API calls
     on products that are truly already live on Shopify.
     """
-    print("\n[DuplicateFilter] 🔍 Checking for already-published products...")
+    print("\n[DuplicateFilter] [*] Checking for already-published products...")
     all_products = state.get("winning_products", [])
 
     new_products = []
@@ -68,11 +68,11 @@ def duplicate_filter_node(state: GraphState) -> dict:
             new_products.append(p)
 
     if skipped:
-        print(f"[DuplicateFilter] ⏭️  Skipping {len(skipped)} already-published products:")
+        print(f"[DuplicateFilter] [*]  Skipping {len(skipped)} already-published products:")
         for title in skipped:
             print(f"[DuplicateFilter]    - {title[:60]}")
 
-    print(f"[DuplicateFilter] ✅ {len(new_products)} new products to process\n")
+    print(f"[DuplicateFilter] [OK] {len(new_products)} new products to process\n")
 
     return {"winning_products": new_products}
 
@@ -135,12 +135,12 @@ def run_layer2(winning_products: list = None, layer1_json_path: str = None,
         try:
             with open(layer1_json_path) as f:
                 winning_products = json.load(f)
-            print(f"✅ Loaded {len(winning_products)} products from {layer1_json_path}")
+            print(f"[OK] Loaded {len(winning_products)} products from {layer1_json_path}")
         except FileNotFoundError:
-            print(f"❌ File not found: {layer1_json_path}")
+            print(f"[X] File not found: {layer1_json_path}")
             raise
         except json.JSONDecodeError as e:
-            print(f"❌ Invalid JSON in {layer1_json_path}: {e}")
+            print(f"[X] Invalid JSON in {layer1_json_path}: {e}")
             raise
 
     if not winning_products:
@@ -180,11 +180,11 @@ def run_full_automated_pipeline() -> dict:
     from layer1.pipeline import run_layer1, REGION_KEYS
 
     print("\n" + "=" * 65)
-    print("  🚀 FULL AUTOMATED PIPELINE: Layer 1 → Layer 2")
+    print("  [*] FULL AUTOMATED PIPELINE: Layer 1 → Layer 2")
     print("=" * 65)
 
     # ── PHASE 1: Layer 1 ──────────────────────────────────────────────────
-    print("\n📊 PHASE 1: Market Intelligence")
+    print("\n[*] PHASE 1: Market Intelligence")
     print("-" * 65)
 
     try:
@@ -195,28 +195,28 @@ def run_full_automated_pipeline() -> dict:
         winning_products = l1_state.get("winning_products", [])
 
         if not winning_products:
-            print("❌ Layer 1 found no winning products. Stopping.")
+            print("[X] Layer 1 found no winning products. Stopping.")
             return {"layer1": l1_state, "layer2": None}
 
-        print(f"\n✅ Layer 1 complete: {len(winning_products)} winning products found")
+        print(f"\n[OK] Layer 1 complete: {len(winning_products)} winning products found")
 
         # Convert Pydantic models to dicts if needed
         if winning_products and hasattr(winning_products[0], 'model_dump'):
             winning_products = [p.model_dump() for p in winning_products]
 
     except Exception as e:
-        print(f"❌ Layer 1 failed with error: {e}")
+        print(f"[X] Layer 1 failed with error: {e}")
         raise
 
     # ── PHASE 2: Layer 2 ──────────────────────────────────────────────────
-    print("\n📦 PHASE 2: Store & Listing")
+    print("\n[*] PHASE 2: Store & Listing")
     print("-" * 65)
 
     try:
         l2_state = run_layer2(winning_products=winning_products)
 
         print("\n" + "=" * 65)
-        print("  ✅ FULL PIPELINE COMPLETE!")
+        print("  [OK] FULL PIPELINE COMPLETE!")
         print("=" * 65)
         print(f"   Layer 1 - Products found: {len(winning_products)}")
         print(f"   Layer 2 - Published: {len(l2_state.get('published_listings', []))}")
@@ -224,7 +224,7 @@ def run_full_automated_pipeline() -> dict:
         print("=" * 65 + "\n")
 
     except Exception as e:
-        print(f"❌ Layer 2 failed with error: {e}")
+        print(f"[X] Layer 2 failed with error: {e}")
         raise
 
     return {
@@ -246,7 +246,7 @@ if __name__ == "__main__":
     else:
         # Default: Run full automated pipeline using config.json for both
         # layers' settings.
-        print("🚀 Running full automated pipeline (Layer 1 + Layer 2)...")
+        print("[*] Running full automated pipeline (Layer 1 + Layer 2)...")
         print("   Settings read from config.json (layer1 + layer2 sections)")
         print("   (To process existing JSON file: python -m layer2.pipeline path/to/file.json)")
         print()

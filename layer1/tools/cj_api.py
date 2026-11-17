@@ -106,12 +106,12 @@ def _request_with_retry(method: str, url: str, **kwargs) -> requests.Response:
             last_exc = e
             if attempt < _MAX_RETRIES:
                 wait = _RETRY_BACKOFF_BASE * (2 ** (attempt - 1))
-                print(f"[CJ]   ⚠️ Network error (attempt {attempt}/{_MAX_RETRIES}) on {url.split('?')[0]}: "
+                print(f"[CJ]   [!] Network error (attempt {attempt}/{_MAX_RETRIES}) on {url.split('?')[0]}: "
                       f"{type(e).__name__} — retrying in {wait:.0f}s...")
                 time.sleep(wait)
                 continue
             else:
-                print(f"[CJ]   ❌ Gave up after {_MAX_RETRIES} attempts on {url.split('?')[0]}: {e}")
+                print(f"[CJ]   [X] Gave up after {_MAX_RETRIES} attempts on {url.split('?')[0]}: {e}")
                 raise
         else:
             last_exc = None
@@ -127,12 +127,12 @@ def _request_with_retry(method: str, url: str, **kwargs) -> requests.Response:
                         wait = _RATE_LIMIT_BACKOFF_BASE * (2 ** (attempt - 1))
                 else:
                     wait = _RATE_LIMIT_BACKOFF_BASE * (2 ** (attempt - 1))
-                print(f"[CJ]   ⚠️ HTTP {resp.status_code} (attempt {attempt}/{_MAX_RETRIES}) on "
+                print(f"[CJ]   [!] HTTP {resp.status_code} (attempt {attempt}/{_MAX_RETRIES}) on "
                       f"{url.split('?')[0]} — retrying in {wait:.0f}s...")
                 time.sleep(wait)
                 continue
             else:
-                print(f"[CJ]   ❌ Still HTTP {resp.status_code} after {_MAX_RETRIES} attempts on {url.split('?')[0]}")
+                print(f"[CJ]   [X] Still HTTP {resp.status_code} after {_MAX_RETRIES} attempts on {url.split('?')[0]}")
                 return resp  # let caller's raise_for_status() surface the final failure as before
 
         return resp
@@ -448,10 +448,10 @@ def get_product_variant_list(pid: str) -> List[dict]:
         return variants
 
     except requests.RequestException as e:
-        print(f"[CJ]   ⚠️ get_product_variant_list failed for pid {pid}: {e}")
+        print(f"[CJ]   [!] get_product_variant_list failed for pid {pid}: {e}")
         return []
     except (ValueError, TypeError, KeyError) as e:
-        print(f"[CJ]   ⚠️ get_product_variant_list bad response for pid {pid}: {e}")
+        print(f"[CJ]   [!] get_product_variant_list bad response for pid {pid}: {e}")
         return []
 
 
@@ -484,15 +484,15 @@ def get_product_videos(pid: str) -> List[str]:
             if url and str(url).startswith("http") and state == "ON_STATE":
                 video_urls.append(url)
             elif url:
-                print(f"[CJ]   ⚠️ pid {pid}: skipped video entry (state={state}, url={url!r})")
+                print(f"[CJ]   [!] pid {pid}: skipped video entry (state={state}, url={url!r})")
 
         return video_urls
 
     except requests.RequestException as e:
-        print(f"[CJ]   ⚠️ queryVideosByProductId failed for pid {pid}: {e}")
+        print(f"[CJ]   [!] queryVideosByProductId failed for pid {pid}: {e}")
         return []
     except (ValueError, TypeError) as e:
-        print(f"[CJ]   ⚠️ queryVideosByProductId bad response for pid {pid}: {e}")
+        print(f"[CJ]   [!] queryVideosByProductId bad response for pid {pid}: {e}")
         return []
 
 
@@ -518,17 +518,17 @@ def download_video(video_url: str, dest_path: str, timeout: int = 60) -> bool:
                     f.write(chunk)
 
         if os.path.getsize(dest_path) == 0:
-            print(f"[CJ]   ⚠️ Downloaded video is empty: {video_url}")
+            print(f"[CJ]   [!] Downloaded video is empty: {video_url}")
             os.remove(dest_path)
             return False
 
         return True
 
     except requests.RequestException as e:
-        print(f"[CJ]   ❌ Video download failed for {video_url}: {e}")
+        print(f"[CJ]   [X] Video download failed for {video_url}: {e}")
         return False
     except OSError as e:
-        print(f"[CJ]   ❌ Could not write video file {dest_path}: {e}")
+        print(f"[CJ]   [X] Could not write video file {dest_path}: {e}")
         return False
 
 
@@ -550,7 +550,7 @@ def get_all_media(pid: str, main_image: str) -> dict:
     """
     detail = get_product_detail(pid, features=["enable_video"])
     if not detail:
-        print(f"[CJ]   ⚠️ pid {pid}: falling back to main image only "
+        print(f"[CJ]   [!] pid {pid}: falling back to main image only "
               f"(detail fetch failed after retries — see error above)")
         return {"images": [main_image] if main_image else [], "videos": []}
 

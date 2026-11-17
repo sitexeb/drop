@@ -53,7 +53,7 @@ def load_config(force_reload: bool = False) -> Dict[str, Any]:
             )
         with open(path, "r") as f:
             _config_cache = json.load(f)
-        print(f"[Config] ✅ Loaded pipeline config from {path}")
+        print(f"[Config] [OK] Loaded pipeline config from {path}")
     return _config_cache
 
 
@@ -64,6 +64,6 @@ def get_layer_config(layer: str) -> Dict[str, Any]:
     cfg = load_config()
     section = cfg.get(layer)
     if section is None:
-        print(f"[Config] ⚠️  No '{layer}' section in config.json — using code defaults.")
+        print(f"[Config] [!] No '{layer}' section in config.json — using code defaults.")
         return {}
     return section
